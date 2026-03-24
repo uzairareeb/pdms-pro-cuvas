@@ -1,0 +1,168 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: students
+    // Document ID: [studentId]
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - srNo: string (optional)
+    //   - name: string (required, < 100 chars)
+    //   - regNo: string (required, < 50 chars)
+    //   - cnic: string (required, < 20 chars)
+    //   - degree: string (required)
+    //   - department: string (required)
+    //   - programme: string (required)
+    //   - currentSemester: number (required, >= 1)
+    //   - isLocked: boolean (required)
+    //   - admissionSession: string (optional)
+    //   - supervisor: string (optional)
+    //   - gs2Status: string (optional)
+    //   - synopsisStatus: string (optional)
+    //   - gs4Status: string (optional)
+    //   - thesisStatus: string (optional)
+    //   - coeStatus: string (optional)
+    //
+    // Collection: staff
+    // Document ID: [staffId]
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - username: string (required, < 50 chars)
+    //   - name: string (required, < 100 chars)
+    //   - role: string (required)
+    //   - lastLogin: string (optional)
+    //
+    // Collection: auditLogs
+    // Document ID: [logId]
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - timestamp: string (required)
+    //   - user: string (required)
+    //   - action: string (required)
+    //   - details: string (optional)
+    //
+    // Collection: sessions
+    // Document ID: [sessionId]
+    // Fields:
+    //   - id: string (required, immutable)
+    //   - name: string (required)
+    //   - startDate: string (optional)
+    //   - endDate: string (optional)
+    //   - isActive: boolean (required)
+    //
+    // Collection: reviewedActions
+    // Document ID: [actionId]
+    // Fields:
+    //   - actionId: string (required, immutable)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == 'System Administrator' ||
+          (request.auth.token.email == "jc.das@cuvas.edu.pk" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidString(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidStudent(data) {
+      return hasRequiredFields(['id', 'name', 'regNo', 'cnic', 'degree', 'department']) &&
+        isValidString('name', 1, 100) &&
+        isValidString('regNo', 1, 50) &&
+        isValidString('cnic', 1, 20) &&
+        data.currentSemester is number && data.currentSemester >= 1 &&
+        data.isLocked is bool;
+    }
+
+    function isValidStaff(data) {
+      return hasRequiredFields(['id', 'username', 'name', 'role']) &&
+        isValidString('username', 1, 50) &&
+        isValidString('name', 1, 100);
+    }
+
+    function isValidAuditLog(data) {
+      return hasRequiredFields(['id', 'timestamp', 'user', 'action']);
+    }
+
+    function isValidSession(data) {
+      return hasRequiredFields(['id', 'name', 'isActive']);
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /students/{studentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidStudent(request.resource.data);
+      allow update: if isAdmin() && isValidStudent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /staff/{staffId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidStaff(request.resource.data);
+      allow update: if isAdmin() && isValidStaff(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidAuditLog(request.resource.data);
+      allow update: if false; // Audit logs should be immutable
+      allow delete: if false;
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidSession(request.resource.data);
+      allow update: if isAdmin() && isValidSession(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /reviewedActions/{actionId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

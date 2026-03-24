@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+database.config.json
+supabase-config.json
+
+.vercel

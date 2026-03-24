@@ -1,0 +1,25 @@
+{
+  "name": "PDMS-PRO v4.0",
+  "short_name": "PDMS-PRO",
+  "description": "Postgraduate Data Management System - Directorate of Advanced Studies",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://storage.googleapis.com/static.antigravity.dev/ai-studio-build/user-content/iqbqk7tbtzorwywhbslier/logo_1741717332305.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://storage.googleapis.com/static.antigravity.dev/ai-studio-build/user-content/iqbqk7tbtzorwywhbslier/logo_1741717332305.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

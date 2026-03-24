@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "A student record in the DAS system.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "srNo": { "type": "string" },
+        "name": { "type": "string" },
+        "regNo": { "type": "string" },
+        "cnic": { "type": "string" },
+        "degree": { "type": "string" },
+        "department": { "type": "string" },
+        "programme": { "type": "string" },
+        "currentSemester": { "type": "number" },
+        "isLocked": { "type": "boolean" },
+        "admissionSession": { "type": "string" },
+        "supervisor": { "type": "string" },
+        "gs2Status": { "type": "string" },
+        "synopsisStatus": { "type": "string" },
+        "gs4Status": { "type": "string" },
+        "thesisStatus": { "type": "string" },
+        "coeStatus": { "type": "string" }
+      },
+      "required": ["id", "name", "regNo", "cnic", "degree", "department"]
+    },
+    "Staff": {
+      "title": "Staff",
+      "description": "A staff member with system access.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "lastLogin": { "type": "string" }
+      },
+      "required": ["id", "username", "name", "role"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "A record of a system action.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "user": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "user", "action"]
+    },
+    "Session": {
+      "title": "Academic Session",
+      "description": "An academic session (e.g., Spring 2026).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name"]
+    },
+    "ReviewedAction": {
+      "title": "Reviewed Action",
+      "description": "A record of a critical action that has been reviewed.",
+      "type": "object",
+      "properties": {
+        "actionId": { "type": "string" }
+      },
+      "required": ["actionId"]
+    }
+  },
+  "firestore": {
+    "students": {
+      "schema": "Student",
+      "description": "Collection of student records."
+    },
+    "staff": {
+      "schema": "Staff",
+      "description": "Collection of staff members."
+    },
+    "auditLogs": {
+      "schema": "AuditLog",
+      "description": "Collection of system audit logs."
+    },
+    "sessions": {
+      "schema": "Session",
+      "description": "Collection of academic sessions."
+    },
+    "reviewedActions": {
+      "schema": "ReviewedAction",
+      "description": "Collection of reviewed action IDs."
+    }
+  }
+}
