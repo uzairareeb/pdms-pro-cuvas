@@ -287,8 +287,8 @@ const SystemReports: React.FC = () => {
     <div className="space-y-8 md:space-y-10 animate-in fade-in duration-700 pb-12">
       <div className="no-print space-y-8 md:space-y-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="flex items-center space-x-5">
-            <div className="w-16 h-16 bg-[#0f172a] dark:bg-slate-800 rounded-2xl flex items-center justify-center overflow-hidden p-1 shadow-sm border border-slate-800 dark:border-slate-700">
+          <div className="flex items-center space-x-4 md:space-x-5">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center overflow-hidden p-1.5 shadow border border-slate-200/60 dark:border-white/10 shrink-0">
               <img 
                 src={settings.institution.logo || '/logo.jpg'} 
                 className="w-full h-full object-contain" 
