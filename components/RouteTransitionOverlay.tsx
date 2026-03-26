@@ -26,18 +26,18 @@ const RouteTransitionOverlay: React.FC = () => {
       {show && (
         <motion.div
           key="route-t"
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.22 }}
-          className="pointer-events-none fixed inset-x-0 top-0 z-[120] flex justify-center pt-3 sm:pt-4"
+          className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center"
         >
-          <div className="rounded-2xl bg-white/92 shadow-lg ring-1 ring-slate-200/90 backdrop-blur-md px-5 py-3 max-w-[min(92vw,420px)]">
+          <div className="rounded-2xl bg-white/92 shadow-2xl ring-1 ring-slate-200/90 backdrop-blur-md px-8 py-6 max-w-[min(92vw,420px)] pointer-events-auto">
             <BrandedLoader
               variant="inline"
               message="Loading"
               subLabel="HEC · DAS"
-              logoSize={56}
+              logoSize={80}
               className="!py-2"
             />
           </div>
