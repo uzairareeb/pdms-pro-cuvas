@@ -190,38 +190,21 @@ const ThesisTracking: React.FC = () => {
     logAction('Data Export', 'Exported Thesis Tracking Registry as CSV.');
   };
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
     if (filtered.length === 0) return;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    doc.setFontSize(14);
-    doc.setTextColor(15, 23, 42); 
-    doc.text(settings.institution.name.toUpperCase(), pageWidth / 2, 15, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.text(settings.institution.directorate.toUpperCase(), pageWidth / 2, 22, { align: 'center' });
-    
-    doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text(`Thesis & COE Dispatch Tracking (Sem 4+) - Generated: ${new Date().toLocaleString()}`, pageWidth / 2, 28, { align: 'center' });
-
-    autoTable(doc, {
-      startY: 35,
-      head: [['Scholar Name', 'Reg #', 'Degree', 'Department', 'Sem', 'Status', 'Dispatch Date', 'Supervisor']],
-      body: filtered.map(s => [
-        s.name, s.regNo || '---', s.degree, s.department, s.currentSemester, 
-        pendingChanges[s.id]?.status || s.gs4Form, 
-        pendingChanges[s.id]?.date || s.coeSubmissionDate || 'N/A', 
-        s.supervisorName || '---'
-      ]),
-      theme: 'grid',
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] }
+    const body = filtered.map(s => [
+      s.name, s.regNo || '---', s.degree, s.department, s.currentSemester, 
+      pendingChanges[s.id]?.status || s.gs4Form || 'Not Submitted', 
+      pendingChanges[s.id]?.date || s.coeSubmissionDate || 'N/A', 
+      s.supervisorName || '---'
+    ]);
+    const { generateOfficialPDF } = await import('../utils/pdfExport');
+    await generateOfficialPDF({
+      reportName: 'Thesis & COE Dispatch Tracking',
+      headers: ['Scholar Name', 'Reg #', 'Degree', 'Department', 'Sem', 'Status', 'Dispatch Date', 'Supervisor'],
+      data: body,
+      landscape: true
     });
-    
-    doc.save(`Thesis_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (

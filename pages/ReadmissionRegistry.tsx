@@ -104,40 +104,18 @@ const ReadmissionRegistry: React.FC = () => {
     logAction('Data Export', 'Exported Readmission Registry as CSV.');
   };
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
     if (filtered.length === 0) return;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42); 
-    doc.setFont('helvetica', 'bold');
-    doc.text(settings.institution.name.toUpperCase(), pageWidth / 2, 18, { align: 'center' });
-    
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(settings.institution.directorate.toUpperCase(), pageWidth / 2, 26, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Readmission Candidates Registry (Dropped Status) - Generated: ${new Date().toLocaleString()}`, pageWidth / 2, 32, { align: 'center' });
-
-    doc.setDrawColor(226, 232, 240);
-    doc.line(20, 36, pageWidth - 20, 36);
-
-    autoTable(doc, {
-      startY: 42,
-      head: [['Scholar Name', 'Reg #', 'Degree', 'Department', 'Session', 'Last Sem', 'Supervisor']],
-      body: filtered.map(s => [
-        s.name, s.regNo || '---', s.degree, s.department, s.session, s.currentSemester, s.supervisorName || '---'
-      ]),
-      theme: 'grid',
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fillColor: [225, 29, 72], textColor: [255, 255, 255], fontStyle: 'bold' }, // Rose color for dropped
-      alternateRowStyles: { fillColor: [254, 242, 242] }
+    const body = filtered.map(s => [
+      s.name, s.regNo || '---', s.degree, s.department, s.session, s.currentSemester, s.supervisorName || '---'
+    ]);
+    const { generateOfficialPDF } = await import('../utils/pdfExport');
+    await generateOfficialPDF({
+      reportName: 'Readmission Candidates Registry',
+      headers: ['Scholar Name', 'Reg #', 'Degree', 'Department', 'Session', 'Last Sem', 'Supervisor'],
+      data: body,
+      landscape: true
     });
-    
-    doc.save(`Readmission_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (

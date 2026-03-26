@@ -43,52 +43,24 @@ const DataExport: React.FC = () => {
     link.click();
   };
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
     if (students.length === 0) return;
-    
-    const doc = new jsPDF('l', 'mm', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Header
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42); // slate-900
-    doc.setFont('helvetica', 'bold');
-    doc.text(settings.institution.name.toUpperCase(), pageWidth / 2, 18, { align: 'center' });
-    
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(settings.institution.directorate.toUpperCase(), pageWidth / 2, 26, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Master Scholar Registry - Extracted: ${new Date().toLocaleString()}`, pageWidth / 2, 32, { align: 'center' });
-
-    doc.setDrawColor(226, 232, 240);
-    doc.line(20, 36, pageWidth - 20, 36);
-
-    // Table
-    const tableHeaders = [['Reg #', 'Scholar Name', 'Degree', 'Specialization', 'Supervisor', 'Status', 'Audit']];
-    const tableData = students.map(s => [
-      s.regNo,
+    const body = students.map(s => [
+      s.regNo || '---',
       s.name,
       s.degree,
       s.programme,
-      s.supervisorName,
+      s.supervisorName || 'Unassigned',
       s.status,
       s.validationStatus
     ]);
-
-    autoTable(doc, {
-      startY: 42,
-      head: tableHeaders,
-      body: tableData,
-      theme: 'grid',
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] }
+    const { generateOfficialPDF } = await import('../utils/pdfExport');
+    await generateOfficialPDF({
+      reportName: 'Master Scholar Registry Extraction',
+      headers: ['Reg #', 'Scholar Name', 'Degree', 'Specialization', 'Supervisor', 'Status', 'Audit'],
+      data: body,
+      landscape: true
     });
-
-    doc.save(`CUVAS_Master_Registry_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (

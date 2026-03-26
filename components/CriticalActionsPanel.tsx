@@ -160,29 +160,23 @@ const CriticalActionsPanel: React.FC = () => {
 
   const departments = Array.from(new Set(students.map(s => s.department)));
 
-  const exportPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('DAS Critical Actions Report', 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
-
-    autoTable(doc, {
-      startY: 40,
-      head: [['Scholar', 'Department', 'Supervisor', 'Item', 'Urgency', 'Overdue']],
-      body: filteredActions.map(a => [
-        a.name, 
-        a.department, 
-        a.supervisor, 
-        a.item, 
-        a.urgency.toUpperCase(), 
-        a.daysOverdue > 0 ? `${a.daysOverdue} Days` : 'Approaching'
-      ]),
-      theme: 'grid',
-      headStyles: { fillColor: [15, 23, 42] }
+  const exportPDF = async () => {
+    if (filteredActions.length === 0) return;
+    const body = filteredActions.map(a => [
+      a.name, 
+      a.department, 
+      a.supervisor, 
+      a.item, 
+      a.urgency.toUpperCase(), 
+      a.daysOverdue > 0 ? `${a.daysOverdue} Days` : 'Approaching'
+    ]);
+    const { generateOfficialPDF } = await import('../utils/pdfExport');
+    await generateOfficialPDF({
+      reportName: 'DAS Critical Actions Report',
+      headers: ['Scholar', 'Department', 'Supervisor', 'Item', 'Urgency', 'Overdue'],
+      data: body,
+      landscape: true
     });
-
-    doc.save(`DAS_Critical_Actions_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportCSV = () => {
