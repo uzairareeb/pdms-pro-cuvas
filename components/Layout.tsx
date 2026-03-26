@@ -236,17 +236,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         className={`flex-1 flex flex-col min-w-0 h-screen overflow-y-auto transition-all duration-300 ${isCollapsed ? 'lg:ml-[88px]' : 'lg:ml-[280px]'}`}
       >
         {/* Header */}
-        <header className="h-20 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-40 bg-white border-b border-slate-200 shrink-0 no-print">
-          <div className="flex items-center gap-6">
+        <header className="h-16 md:h-20 flex items-center justify-between px-4 sm:px-6 lg:px-10 sticky top-0 z-40 bg-white border-b border-slate-200 shrink-0 no-print transition-all">
+          <div className="flex items-center gap-3 md:gap-6">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2.5 rounded-lg bg-slate-100 text-slate-600"
+              className="lg:hidden p-2 md:p-2.5 rounded-lg bg-slate-100 text-slate-600 transition-all active:scale-95"
             >
-              <Menu size={20} />
+              <Menu size={20} className="w-5 h-5 md:w-6 md:h-6" />
             </button>
             
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center p-2 border border-slate-100">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="hidden sm:flex w-10 h-10 md:w-12 md:h-12 bg-slate-50 rounded-lg md:rounded-xl items-center justify-center p-1.5 md:p-2 border border-slate-100 shrink-0">
                 <img 
                   src={settings.institution.logo || ''} 
                   className="w-full h-full object-contain" 
@@ -255,16 +255,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 />
               </div>
               <div className="flex flex-col">
-                <h1 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">PostGrad Hub</h1>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">System Operational</span>
+                <h1 className="text-[17px] md:text-xl font-black text-slate-900 tracking-tight uppercase leading-none truncate max-w-[150px] xs:max-w-[200px] sm:max-w-none">PostGrad Hub</h1>
+                <div className="flex items-center gap-1.5 md:gap-2 mt-1 md:mt-1.5">
+                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-emerald-500 rounded-full animate-pulse shrink-0" />
+                  <span className="text-[8px] md:text-[10px] font-bold text-emerald-600 uppercase tracking-widest truncate">System Operational</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-1.5 md:gap-6">
             <div className="hidden md:flex flex-col items-end">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Session Active</span>
               <span className="text-xs font-bold text-slate-900 uppercase tracking-tight">{currentUser?.role || 'System Administrator'}</span>
