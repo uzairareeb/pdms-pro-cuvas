@@ -30,6 +30,8 @@ import {
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PostLoginLoaderGate from './PostLoginLoaderGate';
+import RouteTransitionOverlay from './RouteTransitionOverlay';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { pathname } = useLocation();
@@ -101,7 +103,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-[#f4f7fe] text-slate-900 relative overflow-hidden">
-      
+      <PostLoginLoaderGate />
+      <RouteTransitionOverlay />
+
       {/* Sidebar Overlay (Mobile) */}
       <AnimatePresence>
         {isSidebarOpen && (

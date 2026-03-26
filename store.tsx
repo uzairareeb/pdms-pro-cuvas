@@ -26,6 +26,9 @@ interface AppContextType {
   isLoading: boolean;
   error: string | null;
   reviewedCriticalActions: string[];
+  /** True briefly after successful login until post-login branded gate completes */
+  justLoggedIn: boolean;
+  completePostLoginSession: () => void;
   notify: (message: string, type: 'success' | 'error') => void;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -128,6 +131,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [sessions, setSessions] = useState<SessionConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
   const [isDatabaseConnected, setIsDatabaseConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reviewedCriticalActions, setReviewedCriticalActions] = useState<string[]>(() => 
@@ -239,6 +243,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => setNotification(null), 5000);
   }, []);
 
+  const completePostLoginSession = useCallback(() => {
+    setJustLoggedIn(false);
+  }, []);
+
   const login = async (username: string, password: string): Promise<boolean> => {
     // Admin check
     if (username === 'admin' && password === 'admin123') {
@@ -250,6 +258,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setCurrentUser(adminUser);
       localStorage.setItem('das_user_obj', JSON.stringify(adminUser));
+      setJustLoggedIn(true);
+      void fetchInitialData();
       logAction('Access', `Administrator logged into the system.`);
       notify(`Welcome back, Admin. Access granted.`, 'success');
       return true;
@@ -260,6 +270,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (user) {
       setCurrentUser(user);
       localStorage.setItem('das_user_obj', JSON.stringify(user));
+      setJustLoggedIn(true);
+      void fetchInitialData();
       logAction('Access', `${user.name} logged into the system.`);
       notify(`Welcome back, ${user.name}. Access granted.`, 'success');
       return true;
@@ -271,6 +283,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = () => {
     setCurrentUser(null);
+    setJustLoggedIn(false);
     localStorage.removeItem('das_user_obj');
     notify('Secure logout successful.', 'success');
   };
@@ -646,6 +659,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isLoading,
       error,
       reviewedCriticalActions,
+      justLoggedIn,
+      completePostLoginSession,
       notify,
       currentRole: currentUser ? { 
         id: 'r1', 

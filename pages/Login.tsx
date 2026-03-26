@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Zap, ArrowRight, Maximize, Minimize } from 'lucide-react';
+import { User, Lock, Maximize, Minimize } from 'lucide-react';
 import { motion } from 'framer-motion';
+import BrandedLoader from '../components/BrandedLoader';
 
 const Login: React.FC = () => {
   const { login, isLoading, currentUser, settings } = useStore();
@@ -37,15 +38,12 @@ const Login: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-[2000] flex flex-col items-center justify-center bg-white">
-        <div className="relative">
-          <div className="w-24 h-24 border-4 border-[#6366f1]/20 border-t-[#6366f1] rounded-full animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-             <Zap className="text-[#6366f1] animate-pulse" size={32} />
-          </div>
-        </div>
-        <p className="mt-8 text-[10px] font-black text-[#6366f1] uppercase tracking-[0.5em] animate-pulse">Initializing Secure Access</p>
-      </div>
+      <BrandedLoader
+        variant="fullscreen"
+        message="Initializing secure access"
+        subLabel="Higher Education Commission · PostGrad Hub"
+        logoSize={176}
+      />
     );
   }
 

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Student } from '../types';
 import Tooltip from '../components/Tooltip';
+import BrandedLoader from '../components/BrandedLoader';
 
 // --- Smart Schema Configuration ---
 // This defines the Exact Source of Truth for both Template Generation and Parsing
@@ -559,18 +560,14 @@ const BulkUpload: React.FC = () => {
       )}
 
       {(status === 'processing' || status === 'parsing') && (
-        <div className="flex flex-col items-center justify-center min-h-[500px] space-y-8 animate-in zoom-in-95">
-          <div className="relative">
-            <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-inner">
-               <Zap size={44} className="animate-bounce" />
-            </div>
-            <div className="absolute inset-0 rounded-xl border-4 border-indigo-600/10 border-t-indigo-600 animate-spin" />
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-              {status === 'parsing' ? 'Auto-Detecting Columns...' : 'Committing to Registry...'}
-            </p>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-3">Smart Engine Active</p>
+        <div className="relative min-h-[500px] rounded-xl overflow-hidden border border-slate-100 bg-white">
+          <div className="absolute inset-0 z-10">
+            <BrandedLoader
+              variant="overlay"
+              message={status === 'parsing' ? 'Auto-detecting columns' : 'Committing to registry'}
+              subLabel="HEC · Smart import"
+              logoSize={140}
+            />
           </div>
         </div>
       )}

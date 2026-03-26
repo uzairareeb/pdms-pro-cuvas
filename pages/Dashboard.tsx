@@ -28,6 +28,7 @@ import { StudentStatus, Gender, ValidationStatus } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SearchAutocomplete from '../components/SearchAutocomplete';
+import BrandedLoader from '../components/BrandedLoader';
 
 const Dashboard: React.FC = () => {
   const { students, settings, isLoading, error, setupDatabase, currentUser } = useStore();
@@ -45,10 +46,12 @@ const Dashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-[2000] flex flex-col items-center justify-center bg-white/80 backdrop-blur-md">
-        <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-        <p className="mt-4 text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em]">Loading PostGrad Hub...</p>
-      </div>
+      <BrandedLoader
+        variant="fullscreen"
+        message="Loading PostGrad Hub"
+        subLabel="Synchronizing registry data"
+        logoSize={168}
+      />
     );
   }
 
