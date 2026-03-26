@@ -144,7 +144,8 @@ const SystemReports: React.FC = () => {
       const addBackgroundWatermark = () => {
         if (cuvasLogo) {
           doc.saveGraphicsState();
-          doc.setGState(new doc.GState({ opacity: 0.05 }));
+          const GState = (doc as any).GState;
+          doc.setGState(new GState({ opacity: 0.05 }));
           // Center watermark
           const size = 120;
           doc.addImage(cuvasLogo, 'JPEG', (pageWidth - size) / 2, (pageHeight - size) / 2, size, size);
