@@ -201,9 +201,8 @@ const ReadmissionRegistry: React.FC = () => {
               <thead className="bg-slate-50/50 text-slate-400 uppercase text-[9px] font-black tracking-[0.3em]">
                 <tr>
                   <th className="px-6 py-10 border-b border-slate-100 text-center w-12">Sr.</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Student Identity</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Program / Department</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Previous Status</th>
+                  <th className="px-10 py-10 border-b border-slate-100 min-w-[250px]">Student Identity</th>
+                  <th className="px-10 py-10 border-b border-slate-100 min-w-[250px]">Program / Department</th>
                   <th className="px-10 py-10 border-b border-slate-100">Readmission Status</th>
                   <th className="px-10 py-10 border-b border-slate-100">Request Date</th>
                   <th className="px-10 py-10 border-b border-slate-100 text-right">Actions</th>
@@ -233,12 +232,7 @@ const ReadmissionRegistry: React.FC = () => {
                        </div>
                     </td>
                     <td className="px-10 py-10">
-                       <span className={`px-3 py-1 bg-rose-50 rounded-lg text-[9px] font-black uppercase text-rose-600 border border-rose-100`}>
-                         {student.previousStatus || student.status}
-                       </span>
-                    </td>
-                    <td className="px-10 py-10">
-                       <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                       <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
                          student.readmissionStatus === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                          student.readmissionStatus === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                          'bg-amber-50 text-amber-600 border-amber-100'
