@@ -164,164 +164,182 @@ export const generateStudentProfilePDF = async (student: Student) => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     
+    // Brand Colors
+    const brandIndigo: [number, number, number] = [79, 70, 229]; // indigo-600
+    const brandSlate: [number, number, number] = [15, 23, 42]; // slate-900 
+    const textGray: [number, number, number] = [100, 116, 139]; // slate-500
+    const lightIndigo: [number, number, number] = [245, 247, 255]; // very light indigo
+    
     // Load Logos
-    const hecLogo = await getBase64ImageFromUrl('/hec-logo.png');
     const cuvasLogo = await getBase64ImageFromUrl('/logo.jpg');
+    const hecLogo = await getBase64ImageFromUrl('/hec-logo.png');
 
-    const brandPrimary: [number, number, number] = [15, 23, 42]; // slate-900 
-    const brandAccent: [number, number, number] = [79, 70, 229]; // indigo-600
-
-    const addHeader = (doc: any) => {
-      // Background and White Header Area
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, pageWidth, 55, 'F');
-
-      // Logos
-      if (cuvasLogo) doc.addImage(cuvasLogo, 'JPEG', 14, 10, 24, 24);
-      if (hecLogo) doc.addImage(hecLogo, 'PNG', pageWidth - 38, 10, 24, 24);
-
-      // Header Text
-      doc.setTextColor(brandPrimary[0], brandPrimary[1], brandPrimary[2]);
+    // 1. Institutional Header (Compact)
+    const addInstitutionalHeader = () => {
+      if (cuvasLogo) doc.addImage(cuvasLogo, 'JPEG', 14, 10, 18, 18);
+      if (hecLogo) doc.addImage(hecLogo, 'PNG', pageWidth - 32, 10, 18, 18);
+      
+      doc.setTextColor(brandSlate[0], brandSlate[1], brandSlate[2]);
       doc.setFont('helvetica', 'bold');
-      
-      doc.setFontSize(13);
-      const uniTitle = "CHOLISTAN UNIVERSITY OF VETERINARY AND ANIMAL SCIENCES, BAHAWALPUR";
-      const splitTitle = doc.splitTextToSize(uniTitle, pageWidth - 90);
-      
-      let yPos = 18;
-      doc.text(splitTitle, pageWidth / 2, yPos, { align: 'center' });
-      
-      yPos += (splitTitle.length * 6) + 1;
-      
-      doc.setFontSize(11);
+      doc.setFontSize(10);
+      doc.text("CHOLISTAN UNIVERSITY OF VETERINARY AND ANIMAL SCIENCES, BAHAWALPUR", pageWidth / 2, 16, { align: 'center' });
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.text("DIRECTORATE OF ADVANCED STUDIES", pageWidth / 2, yPos, { align: 'center' });
+      doc.text("DIRECTORATE OF ADVANCED STUDIES", pageWidth / 2, 21, { align: 'center' });
       
-      yPos += 8;
-      // Report Title
-      doc.setTextColor(brandAccent[0], brandAccent[1], brandAccent[2]);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text("STUDENT ACADEMIC PROFILE", pageWidth / 2, yPos, { align: 'center' });
-      
-      // Divider
-      doc.setDrawColor(226, 232, 240); // slate-200
-      doc.setLineWidth(0.5);
-      doc.line(14, 55, pageWidth - 14, 55);
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.2);
+      doc.line(14, 32, pageWidth - 14, 32);
     };
 
-    addHeader(doc);
+    addInstitutionalHeader();
 
-    // Profile Metadata
-    doc.setTextColor(15, 23, 42); 
-    doc.setFontSize(16);
+    // 2. Student Hero Section (Reference Style)
+    doc.setTextColor(brandSlate[0], brandSlate[1], brandSlate[2]);
     doc.setFont('helvetica', 'bold');
-    doc.text(student.name.toUpperCase(), 14, 68);
+    doc.setFontSize(22);
+    doc.text(student.name.toUpperCase(), 14, 45);
     
     doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
+    doc.setTextColor(brandIndigo[0], brandIndigo[1], brandIndigo[2]);
+    doc.text(`Scholar / Post-Graduate Student`, 14, 51);
+    
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Registration No: ${student.regNo} | Status: ${student.status}`, 14, 74);
+    doc.setFontSize(9);
+    doc.text(`Contact: ${student.contactNumber || 'N/A'}`, 14, 58);
+    doc.text(` | `, 65, 58);
+    doc.text(`Status: ${student.status}`, 70, 58);
+    doc.text(` | `, 115, 58);
+    doc.text(`Reg No: ${student.regNo}`, 120, 58);
 
-    let finalY = 82;
+    let finalY = 68;
 
     const sections = [
       {
-        title: "I. PERSONAL IDENTITY",
+        id: 'identity',
+        title: "Personal Information",
         data: [
           ["Full Name", student.name, "CNIC Number", student.cnic],
           ["Father's Name", student.fatherName, "Gender", student.gender],
-          ["Contact No.", student.contactNumber, "Admission Session", student.session]
+          ["Contact Protocol", student.contactNumber, "Admission Session", student.session]
         ]
       },
       {
-        title: "II. ACADEMIC PROGRAMME",
+        id: 'academic',
+        title: "Academic Programme",
         data: [
-          ["Degree", student.degree, "Faculty/Dept.", student.department],
-          ["Programme", student.programme, "Semester", student.currentSemester.toString()]
+          ["Degree Level", student.degree, "Department", student.department],
+          ["Programme", student.programme, "Current Semester", student.currentSemester.toString()],
+          ["Official Validation", student.validationStatus, "Validation Date", student.validationDate || '---']
         ]
       },
       {
-        title: "III. SUPERVISORY COMMITTEE",
+        id: 'research',
+        title: "Governance & Supervision",
         data: [
-          ["Supervisor", student.supervisorName, "Co-Supervisor", student.coSupervisor || "---"],
-          ["Member 1", student.member1 || "---", "Member 2", student.member2 || "---"],
+          ["Lead Supervisor", student.supervisorName, "Co-Supervisor", student.coSupervisor || "---"],
+          ["Committee Mem 01", student.member1 || "---", "Committee Mem 02", student.member2 || "---"],
           ["Thesis / Res ID", student.thesisId || "---", "GS-2 Coursework", student.gs2CourseWork]
         ]
       },
       {
-        title: "IV. RESEARCH MILESTONES",
+        id: 'milestones',
+        title: "Research & Dissertation Roadmap",
         data: [
           ["Synopsis Status", student.synopsis, "Synopsis Date", student.synopsisSubmissionDate || "---"],
-          ["GS-4 Status", student.gs4Form, "Final Thesis", student.finalThesisStatus],
-          ["Thesis Submission", student.finalThesisSubmissionDate || "---", "COE Dispatch", student.thesisSentToCOE]
+          ["GS-4 Progress", student.gs4Form, "Dissertation Status", student.finalThesisStatus],
+          ["Submission Date", student.finalThesisSubmissionDate || "---", "COE Transmission", student.thesisSentToCOE]
         ]
       }
     ];
 
     sections.forEach((section) => {
-      doc.setTextColor(brandAccent[0], brandAccent[1], brandAccent[2]);
-      doc.setFontSize(10);
+      // Draw Section Header
+      doc.setFillColor(lightIndigo[0], lightIndigo[1], lightIndigo[2]);
+      doc.rect(14, finalY, pageWidth - 28, 8, 'F');
+      
+      doc.setTextColor(brandIndigo[0], brandIndigo[1], brandIndigo[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text(section.title, 14, finalY);
+      doc.setFontSize(9);
+      doc.text(section.title.toUpperCase(), 18, finalY + 5.5);
       
       autoTable(doc, {
-        startY: finalY + 2,
+        startY: finalY + 8,
         body: section.data,
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 3 },
-        columnStyles: {
-          0: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 35 },
-          1: { cellWidth: 55 },
-          2: { fontStyle: 'bold', fillColor: [248, 250, 252], cellWidth: 35 },
-          3: { cellWidth: 55 }
+        theme: 'plain',
+        styles: { 
+          fontSize: 8, 
+          cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
+          textColor: [15, 23, 42],
         },
-        margin: { left: 14, right: 14 }
+        columnStyles: {
+          0: { fontStyle: 'normal', textColor: textGray, cellWidth: 35 },
+          1: { fontStyle: 'bold', cellWidth: 55 },
+          2: { fontStyle: 'normal', textColor: textGray, cellWidth: 35 },
+          3: { fontStyle: 'bold', cellWidth: 55 }
+        },
+        margin: { left: 14, right: 14 },
+        didParseCell: (data) => {
+          if (data.row.index % 1 === 0) {
+             data.cell.styles.lineWidth = { bottom: 0.1 };
+             data.cell.styles.lineColor = [241, 245, 249]; // slate-100
+          }
+        }
       });
       
-      finalY = (doc as any).lastAutoTable.finalY + 10;
+      finalY = (doc as any).lastAutoTable.finalY + 12;
     });
 
-    // Verification Section
+    // Remarks Section
     if (finalY > pageHeight - 40) doc.addPage();
     
-    doc.setDrawColor(226, 232, 240);
-    doc.line(14, finalY, pageWidth - 14, finalY);
+    doc.setTextColor(brandIndigo[0], brandIndigo[1], brandIndigo[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text("SYSTEM REMARKS & VALIDATION", 14, finalY);
     
-    finalY += 10;
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text("Official Remarks:", 14, finalY);
     doc.setFont('helvetica', 'normal');
-    doc.text(student.comments || "No internal comments recorded.", 14, finalY + 5, { maxWidth: pageWidth - 28 });
+    doc.setFontSize(8);
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    const remarks = student.comments || "No internal comments or administrative directives recorded for this scholar profile.";
+    const splitRemarks = doc.splitTextToSize(remarks, pageWidth - 28);
+    doc.text(splitRemarks, 14, finalY + 6);
 
     // Footer
     const addFooter = (doc: any) => {
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184); // slate-400
-      doc.text(`Generated on ${new Date().toLocaleString()} | PDMS System Export`, 14, pageHeight - 12);
-      doc.text("Directorate of Advanced Studies, CUVAS", pageWidth - 14, pageHeight - 12, { align: 'right' });
-      
-      doc.setDrawColor(brandAccent[0], brandAccent[1], brandAccent[2]);
-      doc.setLineWidth(1);
-      doc.line(0, pageHeight - 2, pageWidth, pageHeight - 2);
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Generated on ${new Date().toLocaleString()} | PDMS Official Academic Record`, 14, pageHeight - 10);
+        doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+        
+        doc.setDrawColor(brandIndigo[0], brandIndigo[1], brandIndigo[2]);
+        doc.setLineWidth(0.5);
+        doc.line(14, pageHeight - 14, pageWidth - 14, pageHeight - 14);
+      }
     };
 
     addFooter(doc);
 
-    // Watermark
+    // Subtle Watermark
     if (cuvasLogo) {
-      doc.saveGraphicsState();
-      const GState = (doc as any).GState;
-      doc.setGState(new GState({ opacity: 0.03 }));
-      doc.addImage(cuvasLogo, 'JPEG', (pageWidth - 80) / 2, (pageHeight - 80) / 2, 80, 80);
-      doc.restoreGraphicsState();
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.saveGraphicsState();
+        const GState = (doc as any).GState;
+        doc.setGState(new GState({ opacity: 0.02 }));
+        doc.addImage(cuvasLogo, 'JPEG', (pageWidth - 60) / 2, (pageHeight - 60) / 2, 60, 60);
+        doc.restoreGraphicsState();
+      }
     }
 
-    doc.save(`profile_${student.regNo.replace(/\//g, '_')}.pdf`);
+    doc.save(`Profile_${student.regNo.replace(/\//g, '_')}.pdf`);
     return true;
   } catch (err) {
-    console.error("Profile PDF Error", err);
+    console.error("Profile PDF Overhaul Error", err);
     return false;
   }
 };
