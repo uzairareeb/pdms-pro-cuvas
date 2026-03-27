@@ -71,18 +71,15 @@ const Dashboard: React.FC = () => {
   const getStatus = (s: any) => String(s.status || '').trim().toLowerCase();
   const normalizeDegree = (val: string) => String(val || '').replace(/\./g, '').trim().toUpperCase();
   
-  const maleCount = students.filter(s => String(s.gender).toLowerCase().includes('male')).length;
-  const femaleCount = students.filter(s => String(s.gender).toLowerCase().includes('female')).length;
+  const maleCount = students.filter(s => String(s.gender || '').trim().toLowerCase() === 'male').length;
+  const femaleCount = students.filter(s => String(s.gender || '').trim().toLowerCase() === 'female').length;
   
   const isCompleted = (s: any) => {
-    const status = String(s.status || '').trim().toLowerCase();
-    return status === 'completed' || status.includes('graduated') || status.includes('done');
+    return String(s.status || '').trim().toLowerCase() === 'completed';
   };
   
   const isActiveStatus = (s: any) => {
-    const status = String(s.status || '').trim().toLowerCase();
-    // A student is active if they are explicitly 'active' or not completed/dropped
-    return status === 'active' || (!isCompleted(s) && status !== 'dropped');
+    return String(s.status || '').trim().toLowerCase() === 'active';
   };
   
   const activeCount = students.filter(s => isActiveStatus(s)).length;
@@ -197,29 +194,27 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Graduation Registry - Primary Card */}
           <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm mb-8 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-opacity">
               <CheckCircle size={120} className="text-emerald-900" />
             </div>
             <div className="flex items-center justify-between mb-8 relative z-10">
-               <div>
+               <div className="flex flex-col">
                   <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
                     <CheckCircle size={20} className="mr-3 text-emerald-500" />
-                    Graduation Registry
+                    Completed Students
                   </h3>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Recently Completed Scholars</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Historical Graduation registry</p>
                </div>
-               <div className="text-right">
-                <span className="text-xl font-black text-emerald-600 block tabular-nums">{completeCount}</span>
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Graduates</span>
+               <div className="text-right flex flex-col items-end">
+                <span className="text-2xl font-black text-emerald-600 block tabular-nums">{completeCount}</span>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Graduates found</span>
                </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {students
                 .filter(s => isCompleted(s))
-                .slice(-6)
                 .reverse()
                 .map(student => (
                   <div 
@@ -228,14 +223,14 @@ const Dashboard: React.FC = () => {
                     className="flex items-center justify-between p-5 bg-emerald-50/20 rounded-2xl border border-emerald-100/50 hover:border-emerald-500/30 hover:bg-emerald-50/50 transition-all cursor-pointer group/item"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-white text-emerald-600 flex items-center justify-center font-black text-sm shadow-sm border border-emerald-100 transition-transform group-hover/item:scale-110">
+                      <div className="w-10 h-10 rounded-xl bg-white text-emerald-600 flex items-center justify-center font-black text-sm shadow-sm border border-emerald-100">
                         {student.name[0]}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black text-slate-900 truncate max-w-[120px]">{student.name}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="px-1.5 py-0.5 bg-emerald-100/50 text-emerald-700 text-[7px] font-black uppercase rounded">{student.degree}</span>
-                          <span className="text-[9px] font-bold text-slate-400 truncate tracking-tighter">{student.regNo}</span>
+                          <span className="px-1.5 py-0.5 bg-emerald-100/50 text-emerald-700 text-[6px] font-black uppercase rounded tracking-tighter">{student.degree}</span>
+                          <span className="text-[8px] font-bold text-slate-400 truncate">{student.regNo}</span>
                         </div>
                       </div>
                     </div>
@@ -243,30 +238,35 @@ const Dashboard: React.FC = () => {
                   </div>
               ))}
               {completeCount === 0 && (
-                <div className="col-span-full py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                   <CheckCircle size={32} className="mx-auto text-slate-200 mb-4" />
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Graduation pool is currently empty</p>
+                <div className="col-span-full py-20 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Database check: No graduates indexed yet</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Active Scholars Register */}
+          {/* Active Students Register */}
           <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
                   <Zap size={20} className="mr-3 text-indigo-600" />
-                  Active Scholars Register
+                  Active Students Card
                 </h3>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Currently enrolled in programs</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Currently Active in Database</p>
               </div>
-              <button 
-                onClick={() => navigate('/records')}
-                className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all border border-slate-200"
-              >
-                View All Records
-              </button>
+              <div className="flex items-center gap-4">
+                 <div className="hidden xl:flex flex-col items-end mr-6">
+                    <span className="text-xl font-black text-indigo-600 block tabular-nums">{activeCount}</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-right">Active Count</span>
+                 </div>
+                 <button 
+                  onClick={() => navigate('/records')}
+                  className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all border border-slate-200"
+                >
+                  Scholar Register
+                </button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
