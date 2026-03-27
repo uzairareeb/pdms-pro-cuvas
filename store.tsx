@@ -423,20 +423,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateStudent = async (updated: Student) => {
+    // Optimistic Update for real-time reactivity
+    const previousStudents = [...students];
+    setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+
     if (isDatabaseConnected) {
       try {
-        await fetch('/api/supabase/students/update', {
+        const res = await fetch('/api/supabase/students/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ student: updated })
         });
+        if (!res.ok) throw new Error();
       } catch (e) {
-        notify("Failed to sync update with cloud", "error");
+        // Rollback on failure
+        setStudents(previousStudents);
+        notify("Failed to sync update with cloud. Rolling back.", "error");
         return;
       }
     }
 
-    setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
     logAction('Records', `Updated: ${updated.name}`, 'StudentRecords');
     notify(`Record for ${updated.name} updated successfully.`, 'success');
   };

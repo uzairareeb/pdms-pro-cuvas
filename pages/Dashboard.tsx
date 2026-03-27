@@ -71,13 +71,24 @@ const Dashboard: React.FC = () => {
   const getStatus = (s: any) => String(s.status || '').trim().toLowerCase();
   const normalizeDegree = (val: string) => String(val || '').replace(/\./g, '').trim().toUpperCase();
   
-  const maleCount = students.filter(s => String(s.gender).toLowerCase() === 'male').length;
-  const femaleCount = students.filter(s => String(s.gender).toLowerCase() === 'female').length;
+  const maleCount = students.filter(s => String(s.gender).toLowerCase().includes('male')).length;
+  const femaleCount = students.filter(s => String(s.gender).toLowerCase().includes('female')).length;
   
-  const activeCount = students.filter(s => getStatus(s) === 'active').length;
-  const completeCount = students.filter(s => getStatus(s) === 'completed').length;
-  const leftCount = students.filter(s => getStatus(s) === 'dropped').length;
-  const freezeCount = students.filter(s => getStatus(s) === 'suspended' || getStatus(s) === 'on leave').length;
+  const isCompleted = (s: any) => {
+    const status = String(s.status || '').trim().toLowerCase();
+    return status === 'completed' || status.includes('graduated') || status.includes('done');
+  };
+  
+  const isActiveStatus = (s: any) => {
+    const status = String(s.status || '').trim().toLowerCase();
+    // A student is active if they are explicitly 'active' or not completed/dropped
+    return status === 'active' || (!isCompleted(s) && status !== 'dropped');
+  };
+  
+  const activeCount = students.filter(s => isActiveStatus(s)).length;
+  const completeCount = students.filter(s => isCompleted(s)).length;
+  const leftCount = students.filter(s => getStatus(s).includes('dropped') || getStatus(s).includes('left')).length;
+  const freezeCount = students.filter(s => getStatus(s).includes('suspended') || getStatus(s).includes('on leave')).length;
   
   const needStatusCount = students.filter(s => 
     s.validationStatus === ValidationStatus.PENDING || 
@@ -170,7 +181,7 @@ const Dashboard: React.FC = () => {
                   { stage: 'GS-4', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && s.gs4Form === 'Approved').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.gs4Form === 'Approved').length },
                   { stage: 'Thesis', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && s.finalThesisStatus === 'Approved').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.finalThesisStatus === 'Approved').length },
                   { stage: 'COE', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && s.thesisSentToCOE === 'Yes').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.thesisSentToCOE === 'Yes').length },
-                  { stage: 'Done', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && getStatus(s) === 'completed').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && getStatus(s) === 'completed').length },
+                  { stage: 'Done', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && isCompleted(s)).length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && isCompleted(s)).length },
                 ]}>
                   < CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="stage" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900, fill: '#94a3b8'}} dy={10} />
@@ -186,7 +197,61 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Recent Scholars Table */}
+          {/* Graduation Registry - Primary Card */}
+          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm mb-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+              <CheckCircle size={120} className="text-emerald-900" />
+            </div>
+            <div className="flex items-center justify-between mb-8 relative z-10">
+               <div>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
+                    <CheckCircle size={20} className="mr-3 text-emerald-500" />
+                    Graduation Registry
+                  </h3>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Recently Completed Scholars</p>
+               </div>
+               <div className="text-right">
+                <span className="text-xl font-black text-emerald-600 block tabular-nums">{completeCount}</span>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Graduates</span>
+               </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+              {students
+                .filter(s => isCompleted(s))
+                .slice(-6)
+                .reverse()
+                .map(student => (
+                  <div 
+                    key={student.id} 
+                    onClick={() => navigate(`/students/${student.id}`)}
+                    className="flex items-center justify-between p-5 bg-emerald-50/20 rounded-2xl border border-emerald-100/50 hover:border-emerald-500/30 hover:bg-emerald-50/50 transition-all cursor-pointer group/item"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-white text-emerald-600 flex items-center justify-center font-black text-sm shadow-sm border border-emerald-100 transition-transform group-hover/item:scale-110">
+                        {student.name[0]}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-900 truncate max-w-[120px]">{student.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="px-1.5 py-0.5 bg-emerald-100/50 text-emerald-700 text-[7px] font-black uppercase rounded">{student.degree}</span>
+                          <span className="text-[9px] font-bold text-slate-400 truncate tracking-tighter">{student.regNo}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight size={14} className="text-emerald-300 group-hover/item:text-emerald-500 transition-transform group-hover/item:translate-x-1" />
+                  </div>
+              ))}
+              {completeCount === 0 && (
+                <div className="col-span-full py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                   <CheckCircle size={32} className="mx-auto text-slate-200 mb-4" />
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Graduation pool is currently empty</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Active Scholars Register */}
           <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -216,7 +281,7 @@ const Dashboard: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {students
-                    .filter(s => getStatus(s) === 'active')
+                    .filter(s => isActiveStatus(s))
                     .slice(-5)
                     .reverse()
                     .map((student, idx) => (
@@ -262,44 +327,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Recently Completed Scholars */}
-          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
-                <CheckCircle size={20} className="mr-3 text-emerald-500" />
-                Completed Scholars
-              </h3>
-            </div>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-               {students
-                 .filter(s => getStatus(s) === 'completed')
-                 .reverse()
-                 .map(student => (
-                   <div 
-                    key={student.id} 
-                    onClick={() => navigate(`/students/${student.id}`)}
-                    className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-emerald-200 transition-all group"
-                   >
-                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-black text-xs">
-                          {student.name[0]}
-                        </div>
-                        <div>
-                           <p className="text-xs font-bold text-slate-900 truncate max-w-[150px]">{student.name}</p>
-                           <div className="flex items-center gap-2 mt-0.5">
-                             <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded uppercase">{student.degree}</span>
-                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{student.regNo}</p>
-                           </div>
-                        </div>
-                     </div>
-                     <ChevronRight size={14} className="text-slate-300 group-hover:text-emerald-500 transition-transform group-hover:translate-x-1" />
-                   </div>
-                 ))}
-               {completeCount === 0 && (
-                 <p className="text-[10px] text-center text-slate-400 py-4 font-bold uppercase tracking-widest">No graduates recorded yet</p>
-               )}
-            </div>
-          </div>
+
 
           {/* Scholar Cycle / Milestones */}
           <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
