@@ -1,15 +1,16 @@
 
 import React, { useMemo } from 'react';
 import { useStore } from '../store';
-import { 
+import {
   Search, Plus, Download, FileBarChart, History,
   Target, BarChart3, CheckCircle, LogOut, PauseCircle,
   AlertCircle, Layers, Zap, Users, ChevronRight,
-  ShieldAlert, GraduationCap, UserX
+  ShieldAlert, GraduationCap, BookOpen, FileCheck,
+  UserX, TrendingUp, Building2, ClipboardList, Clock
 } from 'lucide-react';
-import { 
+import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar
+  BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -17,154 +18,151 @@ import SearchAutocomplete from '../components/SearchAutocomplete';
 import BrandedLoader from '../components/BrandedLoader';
 import {
   computeMetrics,
-  isActive,
   isCompleted,
   normalizeDegree,
-  normalizeStatus,
 } from '../utils/dashboardMetrics';
-import { Student } from '../types';
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── KPI Card ────────────────────────────────────────────────────────────────
+interface KpiCardProps { label: string; value: number; color: string; bgColor: string; icon: any; delta?: string; }
+const KpiCard: React.FC<KpiCardProps> = ({ label, value, color, bgColor, icon: Icon, delta }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 16 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="p-6 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+  >
+    <div
+      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+      style={{ background: `linear-gradient(135deg, ${bgColor}08 0%, transparent 60%)` }}
+    />
+    <div className="flex items-center justify-between mb-4 relative z-10">
+      <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${bgColor}15` }}>
+        <Icon size={18} style={{ color }} />
+      </div>
+      {delta && (
+        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
+          style={{ backgroundColor: `${bgColor}12`, color }}>
+          {delta}
+        </span>
+      )}
+    </div>
+    <div className="relative z-10">
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{label}</p>
+      <h4 className="text-3xl font-black tracking-tighter tabular-nums" style={{ color }}>{value}</h4>
+    </div>
+  </motion.div>
+);
 
-const QuickBtn: React.FC<{ icon: any; label: string; path: string; navigate: (p: string) => void }> = ({ icon: Icon, label, path, navigate }) => (
+// ─── Section Header ───────────────────────────────────────────────────────────
+const SectionHeader: React.FC<{ icon: any; title: string; subtitle: string }> = ({ icon: Icon, title, subtitle }) => (
+  <div className="flex items-start gap-3 mb-6">
+    <div className="p-2 bg-slate-100 rounded-xl mt-0.5">
+      <Icon size={16} className="text-indigo-600" />
+    </div>
+    <div>
+      <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">{title}</h3>
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-0.5">{subtitle}</p>
+    </div>
+  </div>
+);
+
+// ─── Quick Action Button ──────────────────────────────────────────────────────
+const QuickBtn: React.FC<{ icon: any; label: string; path: string; navigate: (p: string) => void; color?: string }> = ({
+  icon: Icon, label, path, navigate, color = 'text-indigo-600'
+}) => (
   <button
     onClick={() => navigate(path)}
-    className="flex items-center gap-3 p-4 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 transition-all shadow-sm active:scale-95 w-full"
+    className="flex items-center gap-3 p-4 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 rounded-xl border border-slate-200 hover:border-indigo-200 transition-all shadow-sm active:scale-95 w-full group"
   >
-    <Icon size={16} className="text-indigo-600 shrink-0" />
+    <Icon size={15} className={`${color} shrink-0 group-hover:scale-110 transition-transform`} />
     <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+    <ChevronRight size={12} className="ml-auto text-slate-300 group-hover:text-indigo-400" />
   </button>
 );
 
-interface StudentRowProps { student: Student; navigate: (p: string) => void; }
-const ActiveStudentRow: React.FC<StudentRowProps> = ({ student, navigate }) => (
-  <tr
-    className="group hover:bg-slate-50/60 transition-colors cursor-pointer"
-    onClick={() => navigate(`/students/${student.id}`)}
-  >
-    <td className="py-4 pl-2">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black text-sm shadow-sm border border-indigo-100/50">
-          {student.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-xs font-black text-slate-900 truncate max-w-[140px]">{student.name}</span>
-          <span className="text-[9px] font-bold text-slate-400 tracking-tight truncate max-w-[140px]">{student.fatherName}</span>
-        </div>
-      </div>
-    </td>
-    <td className="py-4">
-      <div className="flex flex-col gap-0.5">
-        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[8px] font-black uppercase w-fit">{student.degree}</span>
-        <span className="text-[9px] font-bold text-slate-500 truncate max-w-[120px]">{student.department}</span>
-      </div>
-    </td>
-    <td className="py-4 text-right pr-2">
-      <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full tabular-nums">{student.regNo}</span>
-    </td>
-  </tr>
-);
-
-interface CompletedCardProps { student: Student; navigate: (p: string) => void; }
-const CompletedStudentCard: React.FC<CompletedCardProps> = ({ student, navigate }) => (
-  <div
-    onClick={() => navigate(`/students/${student.id}`)}
-    className="flex items-center justify-between p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100 hover:border-emerald-400/40 hover:bg-emerald-50/60 transition-all cursor-pointer group/card"
-  >
-    <div className="flex items-center gap-3 min-w-0">
-      <div className="w-10 h-10 rounded-xl bg-white text-emerald-600 flex items-center justify-center font-black text-sm shadow-sm border border-emerald-100 shrink-0">
-        {student.name.charAt(0).toUpperCase()}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-black text-slate-900 truncate">{student.name}</p>
-        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[7px] font-black uppercase rounded tracking-tight">{student.degree}</span>
-          <span className="text-[8px] font-bold text-slate-400 truncate">{student.regNo}</span>
-        </div>
-      </div>
-    </div>
-    <ChevronRight size={14} className="text-emerald-200 shrink-0 group-hover/card:text-emerald-500 transition-transform group-hover/card:translate-x-0.5" />
-  </div>
-);
-
-// ─── KPI Card ────────────────────────────────────────────────────────────────
-interface KpiCardProps { label: string; value: number; color: string; icon: any; subtitle?: string; }
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, color, icon: Icon, subtitle }) => (
-  <div
-    style={{ backgroundColor: color }}
-    className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-all border border-white/10 relative overflow-hidden group"
-  >
-    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-2xl" />
-    <div className="flex items-center justify-between mb-4 relative z-10">
-      <div className="p-2 bg-white/20 rounded-lg text-white">
-        <Icon size={18} />
-      </div>
-      <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">Live</span>
-    </div>
-    <div className="relative z-10">
-      <p className="text-[9px] font-black text-white/75 uppercase tracking-[0.25em] mb-1">{label}</p>
-      <h4 className="text-4xl font-black text-white tracking-tighter tabular-nums leading-none">{value}</h4>
-      {subtitle && <p className="text-[8px] text-white/50 mt-1 font-bold uppercase tracking-wider">{subtitle}</p>}
-    </div>
-  </div>
-);
-
-// ─── Dashboard ───────────────────────────────────────────────────────────────
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard: React.FC = () => {
-  const { students, isLoading, error, currentRole } = useStore();
+  const { students, settings, isLoading, error, currentRole } = useStore();
   const navigate = useNavigate();
 
-  // ── All metrics computed from live store data via the central utility ──────
+  // ── All metrics from central utility ────────────────────────────────────
   const m = useMemo(() => computeMetrics(students), [students]);
 
-  // ── Lifecycle chart data ──────────────────────────────────────────────────
-  const lifecycleData = useMemo(() => [
-    { name: 'Registration', count: students.filter(s => !!s.regNo).length },
-    { name: 'Coursework', count: students.filter(s => s.gs2CourseWork === 'Completed').length },
-    { name: 'Synopsis', count: students.filter(s => s.synopsis === 'Approved').length },
-    { name: 'Thesis', count: students.filter(s => s.finalThesisStatus === 'Approved').length },
-    { name: 'Defense', count: students.filter(s => s.thesisSentToCOE === 'Yes').length },
-    { name: 'Graduation', count: m.completedCount },
-  ], [students, m.completedCount]);
+  // ── Degree split ─────────────────────────────────────────────────────────
+  const degreeSplit = useMemo(() => {
+    const map: Record<string, number> = {};
+    students.forEach(s => {
+      const key = s.degree || 'Unknown';
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => ({ name, value }));
+  }, [students]);
 
-  // ── Bar chart data ────────────────────────────────────────────────────────
-  const barChartData = useMemo(() => [
-    { stage: 'GS-2',    PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.gs2CourseWork === 'Completed').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.gs2CourseWork === 'Completed').length },
-    { stage: 'Synopsis',PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.synopsis === 'Approved').length,      MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.synopsis === 'Approved').length },
-    { stage: 'GS-4',   PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.gs4Form === 'Approved').length,       MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.gs4Form === 'Approved').length },
-    { stage: 'Thesis',  PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.finalThesisStatus === 'Approved').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.finalThesisStatus === 'Approved').length },
-    { stage: 'COE',     PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.thesisSentToCOE === 'Yes').length,    MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.thesisSentToCOE === 'Yes').length },
-    { stage: 'Done',    PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && isCompleted(s)).length,                 MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && isCompleted(s)).length },
+  // ── Department breakdown (top 6) ──────────────────────────────────────────
+  const deptBreakdown = useMemo(() => {
+    const map: Record<string, { total: number; active: number; completed: number }> = {};
+    students.forEach(s => {
+      const dept = s.department || 'Unknown';
+      if (!map[dept]) map[dept] = { total: 0, active: 0, completed: 0 };
+      map[dept].total++;
+      const st = String(s.status || '').trim().toLowerCase();
+      if (st === 'active') map[dept].active++;
+      if (st === 'completed') map[dept].completed++;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 6)
+      .map(([dept, data]) => ({ dept, ...data }));
+  }, [students]);
+
+  // ── Milestone funnel data ─────────────────────────────────────────────────
+  const milestoneData = useMemo(() => [
+    { stage: 'GS-2',     PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.gs2CourseWork === 'Completed').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.gs2CourseWork === 'Completed').length },
+    { stage: 'Synopsis', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.synopsis === 'Approved').length,       MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.synopsis === 'Approved').length },
+    { stage: 'GS-4',    PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.gs4Form === 'Approved').length,        MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.gs4Form === 'Approved').length },
+    { stage: 'Thesis',   PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.finalThesisStatus === 'Approved').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.finalThesisStatus === 'Approved').length },
+    { stage: 'COE',      PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'   && s.thesisSentToCOE === 'Yes').length,     MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.thesisSentToCOE === 'Yes').length },
+    { stage: 'Graduated', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD'  && isCompleted(s)).length,                 MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && isCompleted(s)).length },
   ], [students]);
 
-  // ── Active & Completed student lists (derived from same predicates) ────────
-  const activeStudents  = useMemo(() => students.filter(isActive).slice().reverse(),    [students]);
-  const completedStudents = useMemo(() => students.filter(isCompleted).slice().reverse(), [students]);
+  // ── Validation status ─────────────────────────────────────────────────────
+  const validationData = useMemo(() => {
+    const pending  = students.filter(s => s.validationStatus === 'Pending').length;
+    const approved = students.filter(s => s.validationStatus === 'Approved').length;
+    const returned = students.filter(s => s.validationStatus === 'Returned').length;
+    return [
+      { name: 'Approved', value: approved, color: '#10b981' },
+      { name: 'Pending',  value: pending,  color: '#f59e0b' },
+      { name: 'Returned', value: returned, color: '#ef4444' },
+    ];
+  }, [students]);
 
-  // ── KPI Grid definition ───────────────────────────────────────────────────
-  const kpiGrid = useMemo(() => [
-    { label: 'Total Scholars',  value: m.totalCount,      color: '#4338CA', icon: Layers,       subtitle: `${m.maleCount}M / ${m.femaleCount}F` },
-    { label: 'Male Scholars',   value: m.maleCount,       color: '#0284C7', icon: Users },
-    { label: 'Female Scholars', value: m.femaleCount,     color: '#DB2777', icon: Users },
-    { label: 'Active Registry', value: m.activeCount,     color: '#16A34A', icon: Zap },
-    { label: 'Completed',       value: m.completedCount,  color: '#059669', icon: GraduationCap },
-    { label: 'Left / Dropped',  value: m.droppedCount + m.closedCount, color: '#EA580C', icon: UserX },
-    { label: 'Frozen / Leave',  value: m.suspendedCount + m.onLeaveCount, color: '#7C3AED', icon: PauseCircle },
-    { label: 'Pending Audit',   value: m.pendingAuditCount, color: '#DC2626', icon: AlertCircle },
+  // ── Recent Registrations (last 5) ─────────────────────────────────────────
+  const recentStudents = useMemo(() =>
+    students.slice(-5).reverse()
+  , [students]);
+
+  // ── Status distribution for sidebar ──────────────────────────────────────
+  const statusRows = useMemo(() => [
+    { label: 'Active',     value: m.activeCount,                             color: '#16a34a', bg: '#f0fdf4' },
+    { label: 'Completed',  value: m.completedCount,                          color: '#059669', bg: '#ecfdf5' },
+    { label: 'Dropped',    value: m.droppedCount,                            color: '#ea580c', bg: '#fff7ed' },
+    { label: 'Closed',     value: m.closedCount,                             color: '#d97706', bg: '#fffbeb' },
+    { label: 'Suspended',  value: m.suspendedCount,                          color: '#7c3aed', bg: '#f5f3ff' },
+    { label: 'On Leave',   value: m.onLeaveCount,                            color: '#6d28d9', bg: '#ede9fe' },
+    { label: 'Unknown',    value: m.anomalyCount,                            color: '#dc2626', bg: '#fef2f2' },
   ], [m]);
+
+  // ── Pie chart colors ──────────────────────────────────────────────────────
+  const PIE_COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
   // ─── Guard States ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <BrandedLoader
-        variant="fullscreen"
-        message="Loading PostGrad Hub"
-        subLabel="Synchronizing registry data"
-        logoSize={168}
-      />
+      <BrandedLoader variant="fullscreen" message="Loading PostGrad Hub" subLabel="Synchronizing registry data" logoSize={168} />
     );
   }
-
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
@@ -177,158 +175,272 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-8 pb-12">
 
       {/* Data Integrity Alert */}
       {(!m.isStatusSumValid || m.anomalyCount > 0) && (
-        <div className="flex items-start gap-4 p-5 bg-amber-50 border border-amber-200 rounded-2xl">
-          <ShieldAlert size={20} className="text-amber-600 mt-0.5 shrink-0" />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-sm">
+          <ShieldAlert size={18} className="text-amber-600 mt-0.5 shrink-0" />
           <div>
             <p className="text-xs font-black text-amber-800 uppercase tracking-wide">Data Integrity Warning</p>
-            <p className="text-[10px] text-amber-700 mt-1 leading-relaxed">
-              {m.anomalyCount > 0 && `${m.anomalyCount} student(s) have an unrecognized status value. `}
-              {!m.isStatusSumValid && `Status category totals (${m.activeCount + m.completedCount + m.droppedCount + m.suspendedCount + m.onLeaveCount + m.closedCount + m.anomalyCount}) do not match total scholars (${m.totalCount}).`}
-              {' '}Please review student records.
+            <p className="text-[10px] text-amber-700 mt-1">
+              {m.anomalyCount > 0 && `${m.anomalyCount} student(s) have an unrecognised status. `}
+              {!m.isStatusSumValid && `Category totals don't match total scholars (${m.totalCount}). `}
+              Please review records.
             </p>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* Search Bar */}
+      {/* Search */}
       <div className="relative group no-print">
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
         <SearchAutocomplete
-          className="w-full pl-16 pr-6 py-5 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:border-indigo-600 transition-all text-sm font-medium placeholder:text-slate-400"
+          className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:border-indigo-500 transition-all text-sm font-medium placeholder:text-slate-400"
           placeholder="Search Scholar Registry..."
         />
       </div>
 
-      {/* KPI Metric Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-5 no-print">
-        {kpiGrid.map((item, idx) => (
-          <KpiCard key={idx} {...item} />
-        ))}
+      {/* ── KPI Row ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
+        <KpiCard label="Total Scholars"  value={m.totalCount}     color="#4338ca" bgColor="#4338ca" icon={Layers}        delta="All records" />
+        <KpiCard label="Active Students" value={m.activeCount}    color="#16a34a" bgColor="#16a34a" icon={Zap}           delta="In programme" />
+        <KpiCard label="Graduates"       value={m.completedCount} color="#059669" bgColor="#059669" icon={GraduationCap} delta="Completed" />
+        <KpiCard label="Pending Audit"   value={m.pendingAuditCount} color="#dc2626" bgColor="#dc2626" icon={AlertCircle} delta="Need review" />
       </div>
 
-      {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <KpiCard label="Male"      value={m.maleCount}    color="#0284c7" bgColor="#0284c7" icon={Users} />
+        <KpiCard label="Female"    value={m.femaleCount}  color="#db2777" bgColor="#db2777" icon={Users} />
+        <KpiCard label="Dropped"   value={m.droppedCount + m.closedCount} color="#ea580c" bgColor="#ea580c" icon={UserX} />
+        <KpiCard label="On Leave / Suspended" value={m.onLeaveCount + m.suspendedCount} color="#7c3aed" bgColor="#7c3aed" icon={PauseCircle} />
+      </div>
 
-        {/* ── Left Area ───────────────────────────────────────────────────── */}
-        <div className="lg:col-span-8 space-y-8">
+      {/* ── Main Grid ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
-          {/* Scholar Lifecycle Trends (Bar Chart) */}
-          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between mb-10">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
-                  <BarChart3 size={20} className="mr-3 text-indigo-600" />
-                  Scholar Lifecycle Trends
-                </h3>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Milestone completion velocity · Live Database</p>
-              </div>
-              <div className="flex items-center gap-5">
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-600" /><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">PhD</span></div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">MPhil</span></div>
-              </div>
-            </div>
-            <div className="h-[320px] w-full">
+        {/* LEFT COLUMN – 8 cols */}
+        <div className="xl:col-span-8 space-y-6">
+
+          {/* Milestone Funnel Chart */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <SectionHeader icon={BarChart3} title="Scholar Milestone Funnel" subtitle="Completion velocity by degree · Live Data" />
+            <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barChartData}>
+                <BarChart data={milestoneData} barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="stage" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} />
-                  <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', background: '#fff', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="PhD" fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={22} />
-                  <Bar dataKey="MPhil" fill="#10b981" radius={[4, 4, 0, 0]} barSize={22} />
+                  <XAxis dataKey="stage" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} dy={8} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} width={24} />
+                  <Tooltip
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', background: '#fff', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)', fontSize: '11px', fontWeight: 700 }}
+                  />
+                  <Bar dataKey="PhD"   name="PhD"   fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar dataKey="MPhil" name="MPhil" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Legend iconSize={10} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', paddingTop: 12 }} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* ── Completed Students Card ────────────────────────────────────── */}
-          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
-              <GraduationCap size={128} className="text-emerald-900" />
+          {/* Department Breakdown */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <SectionHeader icon={Building2} title="Department Breakdown" subtitle="Student distribution across departments" />
+            <div className="space-y-3">
+              {deptBreakdown.length === 0 ? (
+                <p className="text-[10px] text-center text-slate-400 uppercase tracking-widest py-10 font-black">No department data available</p>
+              ) : deptBreakdown.map((row, idx) => {
+                const pct = m.totalCount > 0 ? (row.total / m.totalCount) * 100 : 0;
+                return (
+                  <div key={idx} className="group">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-black text-slate-700 uppercase tracking-wide truncate max-w-[55%]">{row.dept}</span>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-[8px] font-black text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">{row.active}A</span>
+                        <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">{row.completed}C</span>
+                        <span className="text-xs font-black text-slate-900 tabular-nums w-7 text-right">{row.total}</span>
+                      </div>
+                    </div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.7, ease: 'easeOut', delay: idx * 0.05 }}
+                        className="h-full rounded-full bg-indigo-500 group-hover:bg-indigo-600 transition-colors"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="flex items-center justify-between mb-8 relative z-10">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
-                  <GraduationCap size={20} className="mr-3 text-emerald-500" />
-                  Completed Students
-                </h3>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-1">
-                  Status = <span className="text-emerald-600">Completed</span> · {m.completedCount} record{m.completedCount !== 1 ? 's' : ''} found
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="text-3xl font-black text-emerald-600 block tabular-nums leading-none">{m.completedCount}</span>
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Graduates</span>
-              </div>
-            </div>
-
-            {completedStudents.length === 0 ? (
-              <div className="py-16 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 relative z-10">
-                <GraduationCap size={36} className="mx-auto text-slate-200 mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No graduates found in database</p>
-                <p className="text-[9px] text-slate-300 mt-1">Set a student's Academic Status to "Completed" to see them here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10 max-h-[460px] overflow-y-auto pr-1 custom-scrollbar">
-                {completedStudents.map(student => (
-                  <CompletedStudentCard key={student.id} student={student} navigate={navigate} />
-                ))}
+            {deptBreakdown.length > 0 && (
+              <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-100">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Legend:</span>
+                <span className="text-[8px] font-black text-green-600 bg-green-50 px-2 py-0.5 rounded-full">A = Active</span>
+                <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">C = Completed</span>
               </div>
             )}
           </div>
 
-          {/* ── Active Students Card ───────────────────────────────────────── */}
-          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
-              <Zap size={128} className="text-indigo-900" />
-            </div>
+          {/* 2-col row: Degree Split + Validation Status */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            <div className="flex items-center justify-between mb-8 relative z-10">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
-                  <Zap size={20} className="mr-3 text-indigo-600" />
-                  Active Students
-                </h3>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-1">
-                  Status = <span className="text-indigo-600">Active</span> · {m.activeCount} record{m.activeCount !== 1 ? 's' : ''} found
-                </p>
-              </div>
-              <div className="flex items-center gap-5">
-                <div className="text-right">
-                  <span className="text-3xl font-black text-indigo-600 block tabular-nums leading-none">{m.activeCount}</span>
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Active</span>
+            {/* Degree Distribution Pie */}
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+              <SectionHeader icon={BookOpen} title="Degree Distribution" subtitle="PhD · MPhil · Others" />
+              {degreeSplit.length === 0 ? (
+                <p className="text-[10px] text-center text-slate-400 uppercase tracking-widest py-10 font-black">No degree data</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="h-[180px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={degreeSplit}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {degreeSplit.map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ borderRadius: '10px', border: 'none', background: '#fff', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', fontSize: 11, fontWeight: 700 }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-2">
+                    {degreeSplit.map((d, i) => (
+                      <div key={i} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          <span className="text-[10px] font-black text-slate-700 uppercase tracking-wide">{d.name}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${m.totalCount > 0 ? (d.value / m.totalCount) * 100 : 0}%`, backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                          </div>
+                          <span className="text-xs font-black text-slate-900 tabular-nums w-7 text-right">{d.value}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <button
-                  onClick={() => navigate('/records')}
-                  className="px-5 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all border border-indigo-100/50 shadow-sm whitespace-nowrap"
-                >
-                  Full Registry
-                </button>
-              </div>
+              )}
             </div>
 
-            <div className="relative z-10 max-h-[480px] overflow-y-auto pr-1 custom-scrollbar">
+            {/* Validation Status */}
+            <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+              <SectionHeader icon={FileCheck} title="Validation Status" subtitle="Record approval pipeline" />
+              <div className="h-[180px] mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={validationData.filter(d => d.value > 0)}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {validationData.filter(d => d.value > 0).map((d, i) => (
+                        <Cell key={i} fill={d.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ borderRadius: '10px', border: 'none', background: '#fff', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', fontSize: 11, fontWeight: 700 }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2">
+                {validationData.map((d, i) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                      <span className="text-[10px] font-black text-slate-700 uppercase tracking-wide">{d.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${m.totalCount > 0 ? (d.value / m.totalCount) * 100 : 0}%`, backgroundColor: d.color }} />
+                      </div>
+                      <span className="text-xs font-black text-slate-900 tabular-nums w-6 text-right">{d.value}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Registrations */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <div className="flex items-start justify-between mb-6">
+              <SectionHeader icon={Clock} title="Recent Registrations" subtitle="Last 5 enrolled scholars" />
+              <button
+                onClick={() => navigate('/records')}
+                className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest border border-indigo-100 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all whitespace-nowrap mt-0.5"
+              >
+                Full Registry →
+              </button>
+            </div>
+            <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="sticky top-0 bg-white/95 backdrop-blur-sm">
+                <thead>
                   <tr className="border-b border-slate-100">
-                    <th className="pb-4 pl-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Scholar</th>
-                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Academic Info</th>
-                    <th className="pb-4 pr-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Reg #</th>
+                    {['Scholar', 'Reg #', 'Degree', 'Department', 'Status'].map(h => (
+                      <th key={h} className="pb-3 text-[8px] font-black text-slate-400 uppercase tracking-wide pr-4 last:pr-0">{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {activeStudents.map(student => (
-                    <ActiveStudentRow key={student.id} student={student} navigate={navigate} />
-                  ))}
-                  {activeStudents.length === 0 && (
+                  {recentStudents.map(student => {
+                    const st = String(student.status || '').trim().toLowerCase();
+                    const statusColor = st === 'active' ? 'bg-green-100 text-green-700' :
+                      st === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                      st === 'dropped' ? 'bg-orange-100 text-orange-700' :
+                      'bg-slate-100 text-slate-500';
+                    return (
+                      <tr
+                        key={student.id}
+                        onClick={() => navigate(`/students/${student.id}`)}
+                        className="hover:bg-slate-50/60 cursor-pointer transition-colors group"
+                      >
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-black text-xs shrink-0 group-hover:bg-indigo-100 transition-colors">
+                              {student.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-xs font-bold text-slate-900 truncate max-w-[100px]">{student.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full tabular-nums">{student.regNo}</span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span className="text-[9px] font-black text-slate-600 uppercase tracking-tight">{student.degree}</span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <span className="text-[9px] font-bold text-slate-500 truncate max-w-[100px] block">{student.department}</span>
+                        </td>
+                        <td className="py-3">
+                          <span className={`text-[8px] font-black uppercase tracking-tight px-2 py-1 rounded-full ${statusColor}`}>
+                            {student.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {recentStudents.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="py-20 text-center">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">No active scholars in database</p>
+                      <td colSpan={5} className="py-12 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        No students enrolled yet
                       </td>
                     </tr>
                   )}
@@ -338,44 +450,69 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Right Sidebar ─────────────────────────────────────────────────── */}
-        <div className="lg:col-span-4 space-y-8">
+        {/* RIGHT SIDEBAR – 4 cols */}
+        <div className="xl:col-span-4 space-y-6">
 
-          {/* Quick Protocols */}
-          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase mb-6 flex items-center">
-              <Zap size={20} className="mr-3 text-indigo-600" />
-              Quick Protocols
-            </h3>
-            <div className="flex flex-col gap-3">
-              {currentRole?.canAdd    && <QuickBtn icon={Plus}         label="Enroll Scholar"   path="/registration"  navigate={navigate} />}
-              {currentRole?.canExport && <QuickBtn icon={Download}     label="Data Extraction"  path="/export"        navigate={navigate} />}
-              <QuickBtn icon={FileBarChart} label="Report Suite"   path="/reports"       navigate={navigate} />
-              {currentRole?.canViewAudit && <QuickBtn icon={History} label="Audit Logs"     path="/audit"         navigate={navigate} />}
+          {/* Quick Actions */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <SectionHeader icon={Zap} title="Quick Actions" subtitle="Jump to key modules" />
+            <div className="flex flex-col gap-2.5">
+              {currentRole?.canAdd    && <QuickBtn icon={Plus}         label="Enroll New Scholar" path="/registration" navigate={navigate} />}
+              {currentRole?.canExport && <QuickBtn icon={Download}     label="Export Data"        path="/export"       navigate={navigate} />}
+              <QuickBtn icon={FileBarChart} label="Generate Reports"  path="/reports"       navigate={navigate} />
+              {currentRole?.canViewAudit && <QuickBtn icon={History}   label="Audit Trail"       path="/audit"        navigate={navigate} />}
+              <QuickBtn icon={BookOpen}      label="Synopsis"          path="/synopsis-submission" navigate={navigate} />
+              <QuickBtn icon={ClipboardList} label="Thesis Tracking"  path="/thesis-tracking" navigate={navigate} />
             </div>
           </div>
 
-          {/* Scholar Cycle / Milestones */}
-          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase mb-8 flex items-center">
-              <Target size={20} className="mr-3 text-indigo-600" />
-              Scholar Cycle
-            </h3>
-            <div className="space-y-5">
-              {lifecycleData.map((milestone, idx) => {
-                const pct = m.totalCount > 0 ? (milestone.count / m.totalCount) * 100 : 0;
+          {/* Status Distribution */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <SectionHeader icon={Layers} title="Status Distribution" subtitle="All scholars by academic status" />
+            <div className="space-y-2">
+              {statusRows.map(row => (
+                <div key={row.label} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: row.bg }}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: row.color }} />
+                    <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: row.color }}>{row.label}</span>
+                  </div>
+                  <span className="text-sm font-black tabular-nums" style={{ color: row.color }}>{row.value}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-slate-100 mt-1">
+                <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">Total</span>
+                <span className="text-sm font-black text-slate-900 tabular-nums">{m.totalCount}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Scholar Cycle Milestones */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <SectionHeader icon={Target} title="Scholar Cycle" subtitle="Milestone completion rates" />
+            <div className="space-y-4">
+              {[
+                { name: 'Registered',  count: students.filter(s => !!s.regNo).length,                       color: '#4f46e5' },
+                { name: 'Coursework',  count: students.filter(s => s.gs2CourseWork === 'Completed').length,  color: '#0284c7' },
+                { name: 'Synopsis',    count: students.filter(s => s.synopsis === 'Approved').length,        color: '#7c3aed' },
+                { name: 'Thesis',      count: students.filter(s => s.finalThesisStatus === 'Approved').length, color: '#db2777' },
+                { name: 'COE',         count: students.filter(s => s.thesisSentToCOE === 'Yes').length,      color: '#ea580c' },
+                { name: 'Graduated',   count: m.completedCount,                                              color: '#059669' },
+              ].map((ms, idx) => {
+                const pct = m.totalCount > 0 ? (ms.count / m.totalCount) * 100 : 0;
                 return (
                   <div key={idx} className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{milestone.name}</span>
-                      <span className="text-xs font-black text-slate-900 tabular-nums">{milestone.count}</span>
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{ms.name}</span>
+                      <span className="text-xs font-black text-slate-900 tabular-nums">{ms.count}</span>
                     </div>
                     <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut', delay: idx * 0.06 }}
-                        className="h-full bg-indigo-600 rounded-full shadow-[0_0_8px_rgba(79,70,229,0.3)]"
+                        transition={{ duration: 0.8, ease: 'easeOut', delay: idx * 0.07 }}
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: ms.color }}
                       />
                     </div>
                   </div>
@@ -384,43 +521,38 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Status Distribution Summary */}
-          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase mb-6 flex items-center">
-              <Layers size={20} className="mr-3 text-indigo-600" />
-              Status Distribution
-            </h3>
+          {/* Thesis Progress Summary */}
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+            <SectionHeader icon={TrendingUp} title="Thesis Progress" subtitle="Submission pipeline overview" />
             <div className="space-y-3">
               {[
-                { label: 'Active',       value: m.activeCount,                              color: 'bg-green-500'  },
-                { label: 'Completed',    value: m.completedCount,                           color: 'bg-emerald-500'},
-                { label: 'Dropped',      value: m.droppedCount,                             color: 'bg-orange-500' },
-                { label: 'Closed',       value: m.closedCount,                              color: 'bg-amber-500'  },
-                { label: 'Suspended',    value: m.suspendedCount,                           color: 'bg-violet-500' },
-                { label: 'On Leave',     value: m.onLeaveCount,                             color: 'bg-purple-500' },
-                { label: 'Unknown',      value: m.anomalyCount,                             color: 'bg-rose-500'   },
-              ].map(row => (
-                <div key={row.label} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-2 h-2 rounded-full ${row.color}`} />
-                    <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">{row.label}</span>
+                { name: 'Synopsis Submitted', count: students.filter(s => s.synopsis !== 'Not Submitted').length, icon: CheckCircle, color: '#10b981' },
+                { name: 'Synopsis Approved',  count: students.filter(s => s.synopsis === 'Approved').length,       icon: CheckCircle, color: '#059669' },
+                { name: 'Final Thesis Sub.',  count: students.filter(s => s.finalThesisStatus !== 'Not Submitted').length, icon: FileBarChart, color: '#4f46e5' },
+                { name: 'Thesis Approved',    count: students.filter(s => s.finalThesisStatus === 'Approved').length, icon: GraduationCap, color: '#7c3aed' },
+                { name: 'Sent to COE',        count: students.filter(s => s.thesisSentToCOE === 'Yes').length,     icon: LogOut, color: '#ea580c' },
+              ].map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <div key={idx} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                    <div className="flex items-center gap-2.5">
+                      <Icon size={13} style={{ color: item.color }} />
+                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-wide">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-black tabular-nums" style={{ color: item.color }}>{item.count}</span>
                   </div>
-                  <span className="text-sm font-black text-slate-900 tabular-nums">{row.value}</span>
-                </div>
-              ))}
-              <div className="pt-2 flex items-center justify-between border-t border-slate-200">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Total</span>
-                <span className="text-sm font-black text-indigo-600 tabular-nums">{m.totalCount}</span>
-              </div>
+                );
+              })}
             </div>
           </div>
+
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="pt-10 border-t border-slate-100 text-center">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-          Designed &amp; Developed by <span className="text-slate-600">Directorate of Advanced Studies</span>
+      <footer className="pt-6 border-t border-slate-100 text-center">
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
+          Designed &amp; Developed by <span className="text-slate-600">Directorate of Advanced Studies, CUVAS</span>
         </p>
       </footer>
     </div>
