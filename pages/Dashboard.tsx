@@ -69,6 +69,7 @@ const Dashboard: React.FC = () => {
   const totalCount = students.length;
   // Robust filtering (case-insensitive and trimmed)
   const getStatus = (s: any) => String(s.status || '').trim().toLowerCase();
+  const normalizeDegree = (val: string) => String(val || '').replace(/\./g, '').trim().toUpperCase();
   
   const maleCount = students.filter(s => String(s.gender).toLowerCase() === 'male').length;
   const femaleCount = students.filter(s => String(s.gender).toLowerCase() === 'female').length;
@@ -100,7 +101,7 @@ const Dashboard: React.FC = () => {
     { name: 'Synopsis', count: students.filter(s => s.synopsis === 'Approved').length },
     { name: 'Thesis', count: students.filter(s => s.finalThesisStatus === 'Approved').length },
     { name: 'Defense', count: students.filter(s => s.thesisSentToCOE === 'Yes').length },
-    { name: 'Graduation', count: students.filter(s => s.status === StudentStatus.COMPLETED).length },
+    { name: 'Graduation', count: completeCount },
   ];
 
   return (
@@ -164,12 +165,12 @@ const Dashboard: React.FC = () => {
             <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[
-                  { stage: 'GS-2', PhD: students.filter(s => s.degree === 'PhD' && s.gs2CourseWork === 'Completed').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.gs2CourseWork === 'Completed').length },
-                  { stage: 'Synopsis', PhD: students.filter(s => s.degree === 'PhD' && s.synopsis === 'Approved').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.synopsis === 'Approved').length },
-                  { stage: 'GS-4', PhD: students.filter(s => s.degree === 'PhD' && s.gs4Form === 'Approved').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.gs4Form === 'Approved').length },
-                  { stage: 'Thesis', PhD: students.filter(s => s.degree === 'PhD' && s.finalThesisStatus === 'Approved').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.finalThesisStatus === 'Approved').length },
-                  { stage: 'COE', PhD: students.filter(s => s.degree === 'PhD' && s.thesisSentToCOE === 'Yes').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.thesisSentToCOE === 'Yes').length },
-                  { stage: 'Done', PhD: students.filter(s => s.degree === 'PhD' && s.status === StudentStatus.COMPLETED).length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.status === StudentStatus.COMPLETED).length },
+                  { stage: 'GS-2', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && s.gs2CourseWork === 'Completed').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.gs2CourseWork === 'Completed').length },
+                  { stage: 'Synopsis', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && s.synopsis === 'Approved').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.synopsis === 'Approved').length },
+                  { stage: 'GS-4', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && s.gs4Form === 'Approved').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.gs4Form === 'Approved').length },
+                  { stage: 'Thesis', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && s.finalThesisStatus === 'Approved').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.finalThesisStatus === 'Approved').length },
+                  { stage: 'COE', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && s.thesisSentToCOE === 'Yes').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && s.thesisSentToCOE === 'Yes').length },
+                  { stage: 'Done', PhD: students.filter(s => normalizeDegree(s.degree) === 'PHD' && getStatus(s) === 'completed').length, MPhil: students.filter(s => normalizeDegree(s.degree) === 'MPHIL' && getStatus(s) === 'completed').length },
                 ]}>
                   < CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="stage" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900, fill: '#94a3b8'}} dy={10} />
@@ -215,7 +216,7 @@ const Dashboard: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {students
-                    .filter(s => s.status === StudentStatus.ACTIVE)
+                    .filter(s => getStatus(s) === 'active')
                     .slice(-5)
                     .reverse()
                     .map((student, idx) => (
@@ -269,10 +270,9 @@ const Dashboard: React.FC = () => {
                 Completed Scholars
               </h3>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                {students
-                 .filter(s => s.status === StudentStatus.COMPLETED)
-                 .slice(-3)
+                 .filter(s => getStatus(s) === 'completed')
                  .reverse()
                  .map(student => (
                    <div 
@@ -285,14 +285,17 @@ const Dashboard: React.FC = () => {
                           {student.name[0]}
                         </div>
                         <div>
-                           <p className="text-xs font-bold text-slate-900 truncate max-w-[120px]">{student.name}</p>
-                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{student.regNo}</p>
+                           <p className="text-xs font-bold text-slate-900 truncate max-w-[150px]">{student.name}</p>
+                           <div className="flex items-center gap-2 mt-0.5">
+                             <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded uppercase">{student.degree}</span>
+                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{student.regNo}</p>
+                           </div>
                         </div>
                      </div>
-                     <ChevronRight size={14} className="text-slate-300 group-hover:text-emerald-500" />
+                     <ChevronRight size={14} className="text-slate-300 group-hover:text-emerald-500 transition-transform group-hover:translate-x-1" />
                    </div>
                  ))}
-               {students.filter(s => s.status === StudentStatus.COMPLETED).length === 0 && (
+               {completeCount === 0 && (
                  <p className="text-[10px] text-center text-slate-400 py-4 font-bold uppercase tracking-widest">No graduates recorded yet</p>
                )}
             </div>

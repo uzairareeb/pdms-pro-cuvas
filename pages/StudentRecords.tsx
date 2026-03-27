@@ -58,7 +58,8 @@ const StudentRecords: React.FC = () => {
     
     const matchesDegree = filterDegree === '' || normalizeDegree(s.degree) === normalizeDegree(filterDegree);
     const matchesDept = filterDept === '' || s.department === filterDept;
-    const matchesStatus = filterStatus === '' || s.status === filterStatus;
+    const matchesStatus = filterStatus === '' || 
+      String(s.status || '').trim().toLowerCase() === filterStatus.toLowerCase();
     const matchesValidation = filterValidation === '' || s.validationStatus === filterValidation;
 
     return matchesSearch && matchesDegree && matchesDept && matchesStatus && matchesValidation;

@@ -313,7 +313,7 @@ const StudentRegistration: React.FC = () => {
                     <Select label="Department" value={formData.department} options={departments} onChange={v => setFormData({...formData, department: v})} />
                     <Select label="Study Program" value={formData.programme} options={programmes} onChange={v => setFormData({...formData, programme: v})} />
                     <Input label="Current Semester" type="number" value={formData.currentSemester?.toString()} onChange={v => setFormData({...formData, currentSemester: parseInt(v)})} />
-                    <Select label="Current Status" value={formData.status} options={['Active', 'On Leave', 'Closed']} onChange={v => setFormData({...formData, status: v as any})} />
+                    <Select label="Current Status" value={formData.status} options={Object.values(StudentStatus)} onChange={v => setFormData({...formData, status: v as any})} />
                   </div>
                   <div className="flex justify-end pt-8">
                     <button type="button" onClick={() => setActiveTab('supervision')} className="flex items-center space-x-3 px-8 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 text-slate-900 dark:text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-all active:scale-95">

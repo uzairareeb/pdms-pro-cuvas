@@ -31,7 +31,8 @@ const SystemReports: React.FC = () => {
 
   const filterStudents = () => {
     return students.filter(s => {
-      const matchStatus = statusFilter === 'All' || s.status === statusFilter;
+      const currentStatus = String(s.status || '').trim().toLowerCase();
+      const matchStatus = statusFilter === 'All' || currentStatus === statusFilter.toLowerCase();
       const matchProgram = programFilter === 'All' || s.programme === programFilter;
       return matchStatus && matchProgram;
     });
@@ -45,8 +46,9 @@ const SystemReports: React.FC = () => {
           const key = `${s.department} - ${s.programme}`;
           if (!acc[key]) acc[key] = { Programme: key, Total: 0, Active: 0, Completed: 0 };
           acc[key].Total++;
-          if (s.status === 'Active') acc[key].Active++;
-          if (s.status === 'Completed') acc[key].Completed++;
+          const currentStatus = String(s.status || '').trim().toLowerCase();
+          if (currentStatus === 'active') acc[key].Active++;
+          if (currentStatus === 'completed') acc[key].Completed++;
           return acc;
         }, {});
         return Object.values(summary);
