@@ -21,8 +21,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 type ProfileTab = 'identity' | 'supervision' | 'thesis';
 
-import StudentTimeline from '../components/StudentTimeline';
-
 const StudentProfile: React.FC = () => {
   const { id } = useParams();
   const { students, updateStudent, currentRole, degrees, programmes, faculty, settings, departments } = useStore();
@@ -104,23 +102,44 @@ const StudentProfile: React.FC = () => {
         </div>
       )}
 
-      {/* Timeline / Progress Bar */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 md:p-10 border border-slate-100 dark:border-white/5 shadow-sm mb-2">
-        <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Scholar Journey</h3>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">Academic Milestones & Progress Tracking</p>
-          </div>
-          <div className="flex items-center space-x-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl border border-indigo-100 dark:border-indigo-500/20 self-start md:self-center">
-            <CheckCircle2 size={14} className="text-indigo-600 dark:text-indigo-400" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Verified Progress</span>
-          </div>
-        </div>
-        <StudentTimeline 
-          student={student} 
-          onUpdate={(updates) => updateStudent({ ...student, ...updates })}
-          isEditable={currentRole?.canEdit && (!student.isLocked || currentRole?.role === 'Admin')}
-        />
+      {/* Profile Completion Tracker */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 md:p-8 border border-slate-100 dark:border-white/5 shadow-sm">
+        {(() => {
+          const coreFields = [
+            student.name, student.cnic, student.contactNumber, student.regNo, 
+            student.programme, student.department, student.session, 
+            student.supervisorName, student.thesisId,
+            student.synopsis !== 'Not Submitted' ? student.synopsis : null,
+            student.finalThesisStatus !== 'Not Submitted' ? student.finalThesisStatus : null
+          ];
+          const filledFields = coreFields.filter(f => f && f !== '---' && f !== '').length;
+          const completionPercent = Math.round((filledFields / coreFields.length) * 100);
+          
+          return (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                  Profile Completion: <span className="text-indigo-600">{completionPercent}%</span>
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                  {filledFields === coreFields.length ? 'Perfect Score' : `${coreFields.length - filledFields} fields remaining for 100% forensic accuracy`}
+                </p>
+              </div>
+              <div className="flex-1 max-w-2xl">
+                 <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-white/5">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${completionPercent === 100 ? 'bg-emerald-500' : 'bg-indigo-600'}`}
+                      style={{ width: `${completionPercent}%` }}
+                    />
+                 </div>
+              </div>
+              <div className="flex items-center space-x-2 px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-white/5">
+                <CheckCircle2 size={14} className="text-emerald-500" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Live Status Check</span>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Profile Layout */}
