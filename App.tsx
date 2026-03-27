@@ -24,28 +24,61 @@ import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 import InstallPWA from './components/InstallPWA';
 
 const NotificationHost = () => {
-  const { notification } = useStore();
+  const { notification, clearNotification } = useStore();
   
-  if (!notification) return null;
-
-  const isSuccess = notification.type === 'success';
-
   return (
-    <div className={`fixed top-6 right-6 z-[1000] flex items-center gap-4 px-8 py-5 rounded-[2rem] shadow-2xl animate-in slide-in-from-right-10 duration-500 border backdrop-blur-xl ${
-      isSuccess 
-        ? 'bg-emerald-600/95 border-emerald-500 text-white shadow-emerald-500/20' 
-        : 'bg-rose-600/95 border-rose-500 text-white shadow-rose-500/20 animate-shake'
-    }`}>
-      <div className="p-2 bg-white/20 rounded-xl">
-        {isSuccess ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
-      </div>
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">
-          {isSuccess ? 'System Sync' : 'System Alert'}
-        </p>
-        <p className="text-sm font-black tracking-tight">{notification.message}</p>
-      </div>
-    </div>
+    <AnimatePresence>
+      {notification && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 md:p-8">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={clearNotification}
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+          />
+          
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 10 }}
+            className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden border border-white/10"
+          >
+            <div className={`h-1.5 ${notification.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            
+            <div className="p-10 flex flex-col items-center text-center space-y-6">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                notification.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' 
+                  : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'
+              }`}>
+                {notification.type === 'success' ? <CheckCircle2 size={32} /> : <AlertCircle size={32} />}
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+                  {notification.type === 'success' ? 'Confirmation' : 'Error'}
+                </h3>
+                <p className="text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+                  {notification.message}
+                </p>
+              </div>
+              
+              <button 
+                onClick={clearNotification}
+                className={`w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 ${
+                  notification.type === 'success'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20'
+                }`}
+              >
+                Accept & Proceed
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
 

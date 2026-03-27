@@ -24,12 +24,9 @@ const Settings: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState('institutional');
   const [localSettings, setLocalSettings] = useState(settings);
-  const [showSavedToast, setShowSavedToast] = useState(false);
 
   const handleSave = () => {
     updateSettings(localSettings);
-    setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 3000);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,12 +147,6 @@ CREATE TABLE students (
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 md:space-y-10 animate-in fade-in duration-700 relative pb-20">
-      {showSavedToast && (
-        <div className="fixed top-24 right-4 md:right-10 z-[100] bg-emerald-600 text-white px-6 md:px-8 py-4 rounded-xl shadow-sm flex items-center space-x-3 animate-in slide-in-from-right-10">
-          <Check size={20} className="stroke-[3]" />
-          <span className="text-xs font-bold uppercase tracking-widest">Settings Saved</span>
-        </div>
-      )}
 
       <div className="flex items-center space-x-4 mb-8">
         <div className="w-12 h-12 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl flex items-center justify-center overflow-hidden p-1 shadow-sm">

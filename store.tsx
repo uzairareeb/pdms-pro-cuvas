@@ -30,6 +30,7 @@ interface AppContextType {
   justLoggedIn: boolean;
   completePostLoginSession: () => void;
   notify: (message: string, type: 'success' | 'error') => void;
+  clearNotification: () => void;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   addStudent: (student: Omit<Student, 'id' | 'isLocked' | 'srNo'>) => void;
@@ -286,7 +287,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const notify = useCallback((message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
+  }, []);
+
+  const clearNotification = useCallback(() => {
+    setNotification(null);
   }, []);
 
   const completePostLoginSession = useCallback(() => {
@@ -734,6 +738,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       justLoggedIn,
       completePostLoginSession,
       notify,
+      clearNotification,
       currentRole: currentUser ? { 
         ...DEFAULT_PERMISSIONS[currentUser.role],
         ...(currentUser.permissions || {}),
