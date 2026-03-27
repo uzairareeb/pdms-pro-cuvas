@@ -13,82 +13,48 @@ interface StudentTimelineProps {
 const StudentTimeline: React.FC<StudentTimelineProps> = ({ student, onUpdate, isEditable = true }) => {
   const { settings } = useStore();
   
-  const allMilestones = [
+  const stages = [
     {
-      id: 'registration',
-      label: 'Registration',
+      id: 'admission',
+      label: 'Admission',
       status: 'Completed',
-      icon: ShieldCheck,
-      date: student.regNo ? 'Initial' : null,
-      options: ['Completed'],
-      enabled: true
+      date: 'Initial'
     },
     {
-      id: 'gs2',
-      label: 'GS-2 Coursework',
-      status: student.gs2CourseWork === 'Completed' ? 'Completed' : 'Pending',
-      icon: BookOpen,
-      date: null,
-      options: ['Pending', 'Completed'],
-      enabled: settings.milestones.gs2.enabled
+      id: 'coursework',
+      label: 'Coursework',
+      status: student.gs2CourseWork === 'Completed' ? 'Completed' : (student.currentSemester >= 2 ? 'In Progress' : 'Not Started'),
     },
     {
       id: 'synopsis',
       label: 'Synopsis',
-      status: student.synopsis === 'Approved' ? 'Completed' : (student.synopsis === 'Submitted' ? 'In Progress' : 'Pending'),
-      icon: FileText,
-      date: student.synopsisSubmissionDate,
-      options: ['Pending', 'In Progress', 'Completed'],
-      enabled: settings.milestones.synopsis.enabled
+      status: student.synopsis === 'Approved' ? 'Completed' : (student.synopsis === 'Submitted' ? 'In Progress' : 'Not Started'),
+      date: student.synopsisSubmissionDate
     },
     {
-      id: 'gs4',
-      label: 'GS-4 Form',
-      status: student.gs4Form === 'Approved' ? 'Completed' : (student.gs4Form === 'Submitted' ? 'In Progress' : 'Pending'),
-      icon: FileText,
-      date: null,
-      options: ['Pending', 'In Progress', 'Completed'],
-      enabled: settings.milestones.gs4.enabled
+      id: 'research',
+      label: 'Research',
+      status: student.finalThesisStatus !== 'Not Submitted' ? 'Completed' : (student.synopsis === 'Approved' ? 'In Progress' : 'Not Started'),
     },
     {
-      id: 'semiFinal',
-      label: 'Semi-Final',
-      status: student.semiFinalThesisStatus === 'Approved' ? 'Completed' : (student.semiFinalThesisStatus === 'Submitted' ? 'In Progress' : 'Pending'),
-      icon: Award,
-      date: student.semiFinalThesisSubmissionDate,
-      options: ['Pending', 'In Progress', 'Completed'],
-      enabled: settings.milestones.semiFinal.enabled
+      id: 'thesis',
+      label: 'Thesis',
+      status: student.finalThesisStatus === 'Approved' ? 'Completed' : (student.finalThesisStatus === 'Submitted' ? 'In Progress' : 'Not Started'),
+      date: student.finalThesisSubmissionDate
     },
     {
-      id: 'final',
-      label: 'Final Thesis',
-      status: student.finalThesisStatus === 'Approved' ? 'Completed' : (student.finalThesisStatus === 'Submitted' ? 'In Progress' : 'Pending'),
-      icon: Award,
-      date: student.finalThesisSubmissionDate,
-      options: ['Pending', 'In Progress', 'Completed'],
-      enabled: settings.milestones.final.enabled
+      id: 'viva',
+      label: 'Viva',
+      status: student.status === StudentStatus.COMPLETED ? 'Completed' : (student.finalThesisStatus === 'Approved' ? 'In Progress' : 'Not Started'),
     },
     {
-      id: 'coe',
-      label: 'COE Dispatch',
-      status: student.thesisSentToCOE === 'Yes' ? 'Completed' : 'Pending',
-      icon: CheckCircle2,
-      date: student.coeSubmissionDate,
-      options: ['Pending', 'Completed'],
-      enabled: settings.milestones.coe.enabled
-    },
-    {
-      id: 'graduation',
-      label: 'Graduation',
-      status: student.status === StudentStatus.COMPLETED ? 'Completed' : 'Pending',
-      icon: GraduationCap,
-      date: null,
-      options: ['Pending', 'Completed'],
-      enabled: true
-    },
+      id: 'completed',
+      label: 'Completed',
+      status: student.status === StudentStatus.COMPLETED ? 'Completed' : 'Not Started',
+    }
   ];
 
-  const milestones = allMilestones.filter(m => m.enabled);
+  const milestones = stages;
 
   const handleStatusChange = (milestoneId: string, newStatus: string) => {
     if (!onUpdate) return;
@@ -135,128 +101,90 @@ const StudentTimeline: React.FC<StudentTimelineProps> = ({ student, onUpdate, is
   };
 
   const completedCount = milestones.filter(m => m.status === 'Completed').length;
-  const progressPercent = Math.round(((completedCount) / (milestones.length)) * 100);
+  const progressPercent = Math.round((completedCount / milestones.length) * 100);
 
-  // Determine overall color based on progress
-  const getProgressColor = () => {
-    if (progressPercent < 30) return 'bg-rose-500';
-    if (progressPercent < 70) return 'bg-orange-500';
-    return 'bg-emerald-500';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Completed': return 'bg-emerald-500';
+      case 'In Progress': return 'bg-indigo-600';
+      default: return 'bg-slate-200';
+    }
   };
 
-  const getProgressShadow = () => {
-    if (progressPercent < 30) return 'shadow-[0_0_15px_rgba(244,63,94,0.4)]';
-    if (progressPercent < 70) return 'shadow-[0_0_15px_rgba(249,115,22,0.4)]';
-    return 'shadow-[0_0_15px_rgba(16,185,129,0.4)]';
+  const getStatusTextColor = (status: string) => {
+    switch (status) {
+      case 'Completed': return 'text-emerald-600';
+      case 'In Progress': return 'text-indigo-600';
+      default: return 'text-slate-400';
+    }
   };
 
   return (
-    <div className="w-full py-6 md:py-12 px-2 md:px-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+    <div className="w-full">
+      {/* Progress Bar Header */}
+      <div className="flex items-center justify-between mb-10 px-2 lg:px-4">
         <div className="flex flex-col">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Journey Completion</span>
-          <div className="flex items-center space-x-3 mt-1">
-            <span className={`text-3xl font-black tracking-tighter ${
-              progressPercent < 30 ? 'text-rose-600' : progressPercent < 70 ? 'text-orange-600' : 'text-emerald-600'
-            }`}>
-              {progressPercent}%
-            </span>
-            <div className="h-2 w-32 md:w-48 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className={`h-full transition-all duration-1000 ${getProgressColor()}`}
-                style={{ width: `${progressPercent}%` }}
-              />
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Total Progress</span>
+          <div className="flex items-center space-x-4 mt-2">
+            <span className="text-3xl font-black text-slate-900 tracking-tighter">{progressPercent}%</span>
+            <div className="h-2 w-48 bg-slate-100 rounded-full overflow-hidden">
+               <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 self-start md:self-center">
-          <div className={`w-2 h-2 rounded-full ${getProgressColor()} animate-pulse`} />
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Live Progress Node</span>
+        <div className="flex items-center space-x-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg">
+           <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+           <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Scholar Roadmap</span>
         </div>
       </div>
 
-      <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-12 md:gap-0">
-        {/* Background Line (Horizontal - Desktop) */}
-        <div className="absolute left-0 top-1/2 w-full h-1.5 bg-slate-100 -translate-y-1/2 z-0 rounded-full hidden md:block" />
-        
-        {/* Progress Line (Horizontal - Desktop) */}
-        <div 
-          className={`absolute left-0 top-1/2 h-1.5 -translate-y-1/2 z-0 transition-all duration-1000 rounded-full ${getProgressColor()} ${getProgressShadow()} hidden md:block`}
-          style={{ 
-            width: `${Math.max(0, ((completedCount - 1) / (milestones.length - 1)) * 100)}%` 
-          }}
-        />
+      {/* Timeline Stepper */}
+      <div className="relative flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-0 lg:px-12">
+         {/* Background connecting line (Desktop) */}
+         <div className="absolute left-12 right-12 top-[22px] h-[3px] bg-slate-100 z-0 hidden lg:block rounded-full" />
+         
+         {/* Vertical line (Mobile) */}
+         <div className="absolute left-1/2 top-4 bottom-4 w-[3px] bg-slate-100 lg:hidden rounded-full -translate-x-1/2" />
 
-        {/* Vertical Line (Mobile) */}
-        <div className="absolute left-7 top-0 w-1.5 h-full bg-slate-100 z-0 rounded-full md:hidden" />
-        <div 
-          className={`absolute left-7 top-0 w-1.5 z-0 transition-all duration-1000 rounded-full ${getProgressColor()} ${getProgressShadow()} md:hidden`}
-          style={{ 
-            height: `${Math.max(0, ((completedCount - 1) / (milestones.length - 1)) * 100)}%` 
-          }}
-        />
-
-        {milestones.map((m) => {
-          const Icon = m.icon;
-          const isCompleted = m.status === 'Completed';
-          const isInProgress = m.status === 'In Progress';
-          
-          return (
-            <div key={m.id} className="relative z-10 flex flex-row md:flex-col items-center md:items-center group w-full md:w-auto">
-              {/* Icon Node */}
-              <div className={`
-                w-14 h-14 md:w-20 md:h-20 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center transition-all duration-500 border-4 shrink-0
-                ${isCompleted ? 'bg-emerald-600 border-emerald-100 text-white shadow-xl shadow-emerald-200 scale-110' : 
-                  isInProgress ? 'bg-orange-500 border-orange-100 text-white shadow-xl shadow-orange-200 animate-pulse' : 
-                  'bg-white border-rose-50 text-rose-300 hover:border-rose-200'}
-              `}>
-                <Icon size={isCompleted ? 28 : 24} className={isCompleted ? 'stroke-[2.5]' : 'stroke-[2]'} />
-              </div>
-              
-              {/* Content Area */}
-              <div className="ml-6 md:ml-0 md:absolute md:top-full md:mt-6 text-left md:text-center min-w-[120px] flex-1">
-                <p className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] ${isCompleted ? 'text-slate-900' : 'text-slate-400'}`}>
-                  {m.label}
-                </p>
-                {m.date && m.date !== 'Initial' && (
-                  <p className={`text-[9px] font-bold mt-1 uppercase tracking-tighter px-2 py-0.5 rounded-full inline-block ${
-                    isCompleted ? 'text-emerald-500 bg-emerald-50' : 'text-orange-500 bg-orange-50'
-                  }`}>
-                    {m.date}
-                  </p>
-                )}
-                <div className="mt-2 relative">
-                  {isEditable && m.id !== 'registration' ? (
-                    <div className="relative inline-block group/select">
-                      <select
-                        value={m.status}
-                        onChange={(e) => handleStatusChange(m.id, e.target.value)}
-                        className={`appearance-none text-[8px] font-black uppercase tracking-widest px-6 py-1.5 rounded-full border cursor-pointer transition-all outline-none pr-8 ${
-                          isCompleted ? 'text-emerald-600 bg-emerald-50 border-emerald-100 hover:bg-emerald-100' : 
-                          isInProgress ? 'text-orange-600 bg-orange-50 border-orange-100 hover:bg-orange-100' : 
-                          'text-rose-600 bg-rose-50 border-rose-100 hover:bg-rose-100'
-                        }`}
-                      >
-                        {m.options.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={10} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
-                    </div>
+         {milestones.map((m, idx) => {
+           const isCompleted = m.status === 'Completed';
+           const isInProgress = m.status === 'In Progress';
+           
+           return (
+             <div key={m.id} className="relative z-10 flex flex-col items-center group flex-1">
+                {/* Step Marker */}
+                <div className={`
+                    w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 border-4 shadow-sm relative
+                    ${isCompleted ? 'bg-emerald-500 border-emerald-50 text-white' : 
+                      isInProgress ? 'bg-indigo-600 border-indigo-50 text-white animate-pulse' : 
+                      'bg-white border-slate-50 text-slate-300'}
+                `}>
+                  {isCompleted ? (
+                    <CheckCircle2 size={24} />
                   ) : (
-                    <span className={`text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${
-                      isCompleted ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 
-                      isInProgress ? 'text-orange-600 bg-orange-50 border-orange-100' : 
-                      'text-rose-600 bg-rose-50 border-rose-100'
-                    }`}>
-                      {m.status}
-                    </span>
+                    <span className="text-xs font-black">{idx + 1}</span>
                   )}
                 </div>
-              </div>
-            </div>
-          );
-        })}
+
+                {/* Labels */}
+                <div className="mt-4 text-center">
+                   <p className={`text-[10px] font-black uppercase tracking-widest ${getStatusTextColor(m.status)}`}>
+                     {m.label}
+                   </p>
+                   {m.date && (
+                     <p className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{m.date}</p>
+                   )}
+                   <span className={`mt-2 inline-block px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-[0.2em] border ${
+                     isCompleted ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
+                     isInProgress ? 'bg-indigo-50 border-indigo-100 text-indigo-600' :
+                     'bg-slate-50 border-slate-100 text-slate-400'
+                   }`}>
+                     {m.status === 'Not Started' ? 'Grey' : m.status}
+                   </span>
+                </div>
+             </div>
+           );
+         })}
       </div>
     </div>
   );
