@@ -290,6 +290,51 @@ CREATE TABLE students (
             </div>
           )}
 
+          {activeTab === 'milestones' && (
+            <div className="space-y-10 md:space-y-12">
+              <SectionHeader title="Academic Milestones" desc="Enable or disable mandatory academic progress stages for scholars." />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <ToggleMilestone 
+                  label="GS-2 (Coursework)" 
+                  desc="Initial verification of completed postgraduate coursework."
+                  value={localSettings.milestones.gs2.enabled}
+                  onChange={v => setLocalSettings({...localSettings, milestones: {...localSettings.milestones, gs2: {enabled: v}}})}
+                />
+                <ToggleMilestone 
+                  label="Synopsis Submission" 
+                  desc="Research proposal submission and departmental approval stage."
+                  value={localSettings.milestones.synopsis.enabled}
+                  onChange={v => setLocalSettings({...localSettings, milestones: {...localSettings.milestones, synopsis: {enabled: v}}})}
+                />
+                <ToggleMilestone 
+                  label="GS-4 (Progress)" 
+                  desc="Formal submission of thesis progress reports and seminars."
+                  value={localSettings.milestones.gs4.enabled}
+                  onChange={v => setLocalSettings({...localSettings, milestones: {...localSettings.milestones, gs4: {enabled: v}}})}
+                />
+                <ToggleMilestone 
+                  label="Semi-Final Thesis" 
+                  desc="Pre-defense submission for internal review and plagiarism check."
+                  value={localSettings.milestones.semiFinal.enabled}
+                  onChange={v => setLocalSettings({...localSettings, milestones: {...localSettings.milestones, semiFinal: {enabled: v}}})}
+                />
+                <ToggleMilestone 
+                  label="Final Thesis" 
+                  desc="The final submission stage before external evaluation."
+                  value={localSettings.milestones.final.enabled}
+                  onChange={v => setLocalSettings({...localSettings, milestones: {...localSettings.milestones, final: {enabled: v}}})}
+                />
+                <ToggleMilestone 
+                  label="COE Dispatch" 
+                  desc="Official transmission of academic results to Controller of Exams."
+                  value={localSettings.milestones.coe.enabled}
+                  onChange={v => setLocalSettings({...localSettings, milestones: {...localSettings.milestones, coe: {enabled: v}}})}
+                />
+              </div>
+            </div>
+          )}
+
           {activeTab === 'databases' && (
             <div className="space-y-12">
               <SectionHeader title="Database Control" desc="Manage your system's cloud infrastructure and persistent storage." />
@@ -410,6 +455,30 @@ const ToggleField = ({ label, value, onChange }: any) => (
     >
       <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${value ? 'left-7' : 'left-1'}`} />
     </button>
+  </div>
+);
+
+const ToggleMilestone = ({ label, desc, value, onChange }: any) => (
+  <div className="p-6 md:p-8 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 rounded-2xl flex flex-col justify-between space-y-6 hover:border-indigo-500/30 transition-all group">
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 dark:text-white">{label}</h4>
+        <div className={`w-2 h-2 rounded-full ${value ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-700'}`} />
+      </div>
+      <p className="text-[10px] md:text-xs text-slate-400 dark:text-slate-500 font-medium leading-relaxed">{desc}</p>
+    </div>
+    
+    <div className="flex items-center justify-between pt-4 border-t border-slate-200/50 dark:border-white/5">
+      <span className={`text-[9px] font-bold uppercase tracking-widest ${value ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+        {value ? 'Active Step' : 'Disabled'}
+      </span>
+      <button 
+        onClick={() => onChange(!value)}
+        className={`w-12 h-6 rounded-full transition-all relative shrink-0 ${value ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+      >
+        <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all ${value ? 'left-6.5' : 'left-0.5'}`} />
+      </button>
+    </div>
   </div>
 );
 
