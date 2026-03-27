@@ -164,182 +164,146 @@ export const generateStudentProfilePDF = async (student: Student) => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     
-    // Brand Colors
-    const brandIndigo: [number, number, number] = [79, 70, 229]; // indigo-600
-    const brandSlate: [number, number, number] = [15, 23, 42]; // slate-900 
-    const textGray: [number, number, number] = [100, 116, 139]; // slate-500
-    const lightIndigo: [number, number, number] = [245, 247, 255]; // very light indigo
-    
     // Load Logos
     const cuvasLogo = await getBase64ImageFromUrl('/logo.jpg');
     const hecLogo = await getBase64ImageFromUrl('/hec-logo.png');
 
-    // 1. Institutional Header (Compact)
-    const addInstitutionalHeader = () => {
-      if (cuvasLogo) doc.addImage(cuvasLogo, 'JPEG', 14, 10, 18, 18);
-      if (hecLogo) doc.addImage(hecLogo, 'PNG', pageWidth - 32, 10, 18, 18);
-      
-      doc.setTextColor(brandSlate[0], brandSlate[1], brandSlate[2]);
+    const addMinimalHeader = () => {
+      if (cuvasLogo) doc.addImage(cuvasLogo, 'JPEG', 14, 10, 20, 20);
+      if (hecLogo) doc.addImage(hecLogo, 'PNG', pageWidth - 34, 10, 20, 20);
+
+      doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.text("CHOLISTAN UNIVERSITY OF VETERINARY AND ANIMAL SCIENCES, BAHAWALPUR", pageWidth / 2, 16, { align: 'center' });
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.text("DIRECTORATE OF ADVANCED STUDIES", pageWidth / 2, 21, { align: 'center' });
       
-      doc.setDrawColor(226, 232, 240);
-      doc.setLineWidth(0.2);
-      doc.line(14, 32, pageWidth - 14, 32);
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(14, 34, pageWidth - 14, 34);
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text("STUDENT PROFILE RECORD", pageWidth / 2, 42, { align: 'center' });
     };
 
-    addInstitutionalHeader();
+    addMinimalHeader();
 
-    // 2. Student Hero Section (Reference Style)
-    doc.setTextColor(brandSlate[0], brandSlate[1], brandSlate[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text(student.name.toUpperCase(), 14, 45);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(brandIndigo[0], brandIndigo[1], brandIndigo[2]);
-    doc.text(`Scholar / Post-Graduate Student`, 14, 51);
-    
-    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text(`Contact: ${student.contactNumber || 'N/A'}`, 14, 58);
-    doc.text(` | `, 65, 58);
-    doc.text(`Status: ${student.status}`, 70, 58);
-    doc.text(` | `, 115, 58);
-    doc.text(`Reg No: ${student.regNo}`, 120, 58);
-
-    let finalY = 68;
+    let finalY = 52;
 
     const sections = [
       {
-        id: 'identity',
-        title: "Personal Information",
+        title: "Section 1: Personal Identification",
         data: [
           ["Full Name", student.name, "CNIC Number", student.cnic],
           ["Father's Name", student.fatherName, "Gender", student.gender],
-          ["Contact Protocol", student.contactNumber, "Admission Session", student.session]
+          ["Contact No.", student.contactNumber, "Admission Session", student.session]
         ]
       },
       {
-        id: 'academic',
-        title: "Academic Programme",
+        title: "Section 2: Academic Program Information",
         data: [
           ["Degree Level", student.degree, "Department", student.department],
-          ["Programme", student.programme, "Current Semester", student.currentSemester.toString()],
-          ["Official Validation", student.validationStatus, "Validation Date", student.validationDate || '---']
+          ["Major / Specialization", student.programme, "Registration #", student.regNo],
+          ["Current Semester", student.currentSemester.toString(), "Academic Status", student.status]
         ]
       },
       {
-        id: 'research',
-        title: "Governance & Supervision",
+        title: "Section 3: Supervision & Committee Details",
         data: [
-          ["Lead Supervisor", student.supervisorName, "Co-Supervisor", student.coSupervisor || "---"],
-          ["Committee Mem 01", student.member1 || "---", "Committee Mem 02", student.member2 || "---"],
-          ["Thesis / Res ID", student.thesisId || "---", "GS-2 Coursework", student.gs2CourseWork]
+          ["Major Supervisor", student.supervisorName, "Co-Supervisor", student.coSupervisor || "---"],
+          ["Member 1", student.member1 || "---", "Member 2", student.member2 || "---"],
+          ["Thesis / Project ID", student.thesisId || "---", "Coursework Status", student.gs2CourseWork]
         ]
       },
       {
-        id: 'milestones',
-        title: "Research & Dissertation Roadmap",
+        title: "Section 4: Research Progress Milestones",
         data: [
-          ["Synopsis Status", student.synopsis, "Synopsis Date", student.synopsisSubmissionDate || "---"],
-          ["GS-4 Progress", student.gs4Form, "Dissertation Status", student.finalThesisStatus],
-          ["Submission Date", student.finalThesisSubmissionDate || "---", "COE Transmission", student.thesisSentToCOE]
+          ["Synopsis Status", student.synopsis, "Synopsis Approved Date", student.synopsisSubmissionDate || "---"],
+          ["GS-4 Progress", student.gs4Form, "Final Thesis Status", student.finalThesisStatus],
+          ["Final Submission Date", student.finalThesisSubmissionDate || "---", "COE Dispatch Status", student.thesisSentToCOE]
+        ]
+      },
+      {
+        title: "Section 5: Final Validation & Audit",
+        data: [
+          ["Validation Status", student.validationStatus, "Validation Date", student.validationDate || "---"]
         ]
       }
     ];
 
     sections.forEach((section) => {
-      // Draw Section Header
-      doc.setFillColor(lightIndigo[0], lightIndigo[1], lightIndigo[2]);
-      doc.rect(14, finalY, pageWidth - 28, 8, 'F');
-      
-      doc.setTextColor(brandIndigo[0], brandIndigo[1], brandIndigo[2]);
+      // Heading
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text(section.title.toUpperCase(), 18, finalY + 5.5);
+      doc.text(section.title, 14, finalY);
       
       autoTable(doc, {
-        startY: finalY + 8,
+        startY: finalY + 2,
         body: section.data,
-        theme: 'plain',
+        theme: 'grid',
         styles: { 
           fontSize: 8, 
-          cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
-          textColor: [15, 23, 42],
+          cellPadding: 3,
+          textColor: [0, 0, 0],
+          lineColor: [0, 0, 0],
+          lineWidth: 0.1
         },
         columnStyles: {
-          0: { fontStyle: 'normal', textColor: textGray, cellWidth: 35 },
-          1: { fontStyle: 'bold', cellWidth: 55 },
-          2: { fontStyle: 'normal', textColor: textGray, cellWidth: 35 },
-          3: { fontStyle: 'bold', cellWidth: 55 }
+          0: { fontStyle: 'bold', fillColor: [240, 240, 240], cellWidth: 35 },
+          1: { cellWidth: 55 },
+          2: { fontStyle: 'bold', fillColor: [240, 240, 240], cellWidth: 35 },
+          3: { cellWidth: 55 }
         },
-        margin: { left: 14, right: 14 },
-        didParseCell: (data) => {
-          if (data.row.index % 1 === 0) {
-             data.cell.styles.lineWidth = { bottom: 0.1 };
-             data.cell.styles.lineColor = [241, 245, 249]; // slate-100
-          }
-        }
+        margin: { left: 14, right: 14 }
       });
       
-      finalY = (doc as any).lastAutoTable.finalY + 12;
+      finalY = (doc as any).lastAutoTable.finalY + 10;
     });
 
-    // Remarks Section
-    if (finalY > pageHeight - 40) doc.addPage();
-    
-    doc.setTextColor(brandIndigo[0], brandIndigo[1], brandIndigo[2]);
+    // Remarks
+    if (finalY > pageHeight - 30) doc.addPage();
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text("SYSTEM REMARKS & VALIDATION", 14, finalY);
-    
+    doc.text("Directorate Remarks:", 14, finalY);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-    const remarks = student.comments || "No internal comments or administrative directives recorded for this scholar profile.";
-    const splitRemarks = doc.splitTextToSize(remarks, pageWidth - 28);
-    doc.text(splitRemarks, 14, finalY + 6);
+    const remarksLines = doc.splitTextToSize(student.comments || "---", pageWidth - 28);
+    doc.text(remarksLines, 14, finalY + 5);
 
     // Footer
     const addFooter = (doc: any) => {
-      const pageCount = (doc as any).internal.getNumberOfPages();
-      for(let i = 1; i <= pageCount; i++) {
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-        doc.setFontSize(7);
-        doc.setTextColor(148, 163, 184);
-        doc.text(`Generated on ${new Date().toLocaleString()} | PDMS Official Academic Record`, 14, pageHeight - 10);
-        doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
-        
-        doc.setDrawColor(brandIndigo[0], brandIndigo[1], brandIndigo[2]);
-        doc.setLineWidth(0.5);
-        doc.line(14, pageHeight - 14, pageWidth - 14, pageHeight - 14);
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`CUVAS PDMS Generated Report | Date: ${new Date().toLocaleDateString()}`, 14, pageHeight - 12);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth - 14, pageHeight - 12, { align: 'right' });
       }
     };
 
     addFooter(doc);
 
-    // Subtle Watermark
+    // Watermark
     if (cuvasLogo) {
-      const pageCount = (doc as any).internal.getNumberOfPages();
-      for(let i = 1; i <= pageCount; i++) {
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
         doc.saveGraphicsState();
         const GState = (doc as any).GState;
-        doc.setGState(new GState({ opacity: 0.02 }));
+        doc.setGState(new GState({ opacity: 0.04 }));
         doc.addImage(cuvasLogo, 'JPEG', (pageWidth - 60) / 2, (pageHeight - 60) / 2, 60, 60);
         doc.restoreGraphicsState();
       }
     }
 
-    doc.save(`Profile_${student.regNo.replace(/\//g, '_')}.pdf`);
+    doc.save(`Student_Profile_${student.regNo.replace(/\//g, '_')}.pdf`);
     return true;
   } catch (err) {
-    console.error("Profile PDF Overhaul Error", err);
+    console.error("Minimalist PDF Export Error", err);
     return false;
   }
 };
