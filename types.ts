@@ -60,6 +60,13 @@ export interface Student {
 
 export type UserRole = 'Admin' | 'Editor' | 'Viewer';
 
+export interface ModulePermissions {
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+}
+
 export interface StaffUser {
   id: string;
   username: string;
@@ -67,11 +74,28 @@ export interface StaffUser {
   name: string;
   role: UserRole;
   lastLogin?: string;
+  permissions?: Record<string, ModulePermissions>;
 }
 
 export interface RolePermissions {
   id: string;
   role: UserRole;
+  
+  // Module-specific Granular Permissions
+  Dashboard?: ModulePermissions;
+  StudentRecords?: ModulePermissions;
+  StudentRegistration?: ModulePermissions;
+  BulkUpload?: ModulePermissions;
+  DataExport?: ModulePermissions;
+  AuditTrail?: ModulePermissions;
+  SystemReports?: ModulePermissions;
+  UserManagement?: ModulePermissions;
+  Settings?: ModulePermissions;
+  ReadmissionRegistry?: ModulePermissions;
+  SynopsisSubmission?: ModulePermissions;
+  ThesisTracking?: ModulePermissions;
+
+  // Legacy Compatibility Flags
   canAdd: boolean;
   canEdit: boolean;
   canDelete: boolean;
@@ -133,6 +157,9 @@ export interface AuditLog {
   id: string;
   timestamp: string;
   user: string;
+  role: UserRole;
   action: string;
+  module: string;
   details: string;
+  ip?: string;
 }

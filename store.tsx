@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
-  Student, SystemSettings, AuditLog, StudentStatus, Gender, StaffUser, RolePermissions, SessionConfig, ValidationStatus
+  Student, SystemSettings, AuditLog, StudentStatus, Gender, StaffUser, RolePermissions, SessionConfig, ValidationStatus, ModulePermissions, UserRole
 } from './types';
 
 interface Notification {
@@ -40,9 +40,10 @@ interface AppContextType {
   deleteAllStudents: () => void;
   toggleLockStudent: (id: string) => void;
   updateSettings: (settings: SystemSettings) => void;
-  logAction: (action: string, details: string) => void;
+  logAction: (action: string, details: string, module?: string) => void;
   addStaff: (user: Omit<StaffUser, 'id'>) => void;
   updateStaff: (user: StaffUser) => void;
+  updateStaffPermissions: (id: string, permissions: Record<string, ModulePermissions>) => void;
   deleteStaff: (id: string) => void;
   addSession: (session: SessionConfig) => void;
   backupDatabase: () => void;
@@ -77,6 +78,51 @@ const FACULTY_DATABASE = [
 ];
 
 const DEFAULT_LOGO_PATH = '/logo.jpg';
+
+const DEFAULT_PERMISSIONS: Record<UserRole, Record<string, ModulePermissions>> = {
+  Admin: {
+    Dashboard: { view: true, create: true, edit: true, delete: true },
+    StudentRecords: { view: true, create: true, edit: true, delete: true },
+    StudentRegistration: { view: true, create: true, edit: true, delete: true },
+    BulkUpload: { view: true, create: true, edit: true, delete: true },
+    DataExport: { view: true, create: true, edit: true, delete: true },
+    AuditTrail: { view: true, create: true, edit: true, delete: true },
+    SystemReports: { view: true, create: true, edit: true, delete: true },
+    UserManagement: { view: true, create: true, edit: true, delete: true },
+    Settings: { view: true, create: true, edit: true, delete: true },
+    ReadmissionRegistry: { view: true, create: true, edit: true, delete: true },
+    SynopsisSubmission: { view: true, create: true, edit: true, delete: true },
+    ThesisTracking: { view: true, create: true, edit: true, delete: true },
+  },
+  Editor: {
+    Dashboard: { view: true, create: true, edit: true, delete: false },
+    StudentRecords: { view: true, create: true, edit: true, delete: false },
+    StudentRegistration: { view: true, create: true, edit: true, delete: false },
+    BulkUpload: { view: true, create: true, edit: true, delete: false },
+    DataExport: { view: true, create: true, edit: true, delete: false },
+    AuditTrail: { view: true, create: false, edit: false, delete: false },
+    SystemReports: { view: true, create: true, edit: true, delete: false },
+    UserManagement: { view: false, create: false, edit: false, delete: false },
+    Settings: { view: false, create: false, edit: false, delete: false },
+    ReadmissionRegistry: { view: true, create: true, edit: true, delete: false },
+    SynopsisSubmission: { view: true, create: true, edit: true, delete: false },
+    ThesisTracking: { view: true, create: true, edit: true, delete: false },
+  },
+  Viewer: {
+    Dashboard: { view: true, create: false, edit: false, delete: false },
+    StudentRecords: { view: true, create: false, edit: false, delete: false },
+    StudentRegistration: { view: false, create: false, edit: false, delete: false },
+    BulkUpload: { view: false, create: false, edit: false, delete: false },
+    DataExport: { view: false, create: false, edit: false, delete: false },
+    AuditTrail: { view: false, create: false, edit: false, delete: false },
+    SystemReports: { view: true, create: false, edit: false, delete: false },
+    UserManagement: { view: false, create: false, edit: false, delete: false },
+    Settings: { view: false, create: false, edit: false, delete: false },
+    ReadmissionRegistry: { view: true, create: false, edit: false, delete: false },
+    SynopsisSubmission: { view: true, create: false, edit: false, delete: false },
+    ThesisTracking: { view: true, create: false, edit: false, delete: false },
+  }
+};
 
 const INITIAL_SETTINGS: SystemSettings = {
   institution: {
@@ -260,7 +306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('das_user_obj', JSON.stringify(adminUser));
       setJustLoggedIn(true);
       void fetchInitialData();
-      logAction('Access', `Administrator logged into the system.`);
+      logAction('Access', `Administrator logged into the system.`, 'Dashboard');
       notify(`Welcome back, Admin. Access granted.`, 'success');
       return true;
     }
@@ -272,7 +318,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('das_user_obj', JSON.stringify(user));
       setJustLoggedIn(true);
       void fetchInitialData();
-      logAction('Access', `${user.name} logged into the system.`);
+      logAction('Access', `${user.name} logged into the system.`, 'Dashboard');
       notify(`Welcome back, ${user.name}. Access granted.`, 'success');
       return true;
     }
@@ -288,12 +334,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     notify('Secure logout successful.', 'success');
   };
 
-  const logAction = async (action: string, details: string) => {
+  const logAction = async (action: string, details: string, module: string = 'System') => {
     const newLog: AuditLog = {
       id: 'L' + Math.random().toString(36).substr(2, 5).toUpperCase(),
       timestamp: new Date().toISOString(),
       user: currentUser?.name || 'System',
+      role: currentUser?.role || 'Viewer',
       action,
+      module,
       details,
     };
     
@@ -309,7 +357,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
     
-    setAuditLogs(prev => [newLog, ...prev].slice(0, 1000));
+    setAuditLogs(prev => [newLog, ...prev].slice(0, 5000));
   };
 
   const addStudent = async (data: any) => {
@@ -334,7 +382,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStudents(prev => [...prev, newStudent]);
-    logAction('Registration', `Enrolled: ${newStudent.name}`);
+    logAction('Registration', `Enrolled: ${newStudent.name}`, 'StudentRegistration');
     notify(`Scholar ${newStudent.name} provisioned successfully.`, 'success');
   };
 
@@ -365,7 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStudents(prev => [...prev, ...processed]);
-    logAction('Bulk Upload', `Added ${processed.length} records via CSV.`);
+    logAction('Bulk Upload', `Added ${processed.length} records via CSV.`, 'BulkUpload');
     notify(`${processed.length} scholar records integrated into registry.`, 'success');
     return processed.length;
   };
@@ -385,7 +433,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
-    logAction('Records', `Updated: ${updated.name}`);
+    logAction('Records', `Updated: ${updated.name}`, 'StudentRecords');
     notify(`Record for ${updated.name} updated successfully.`, 'success');
   };
 
@@ -428,7 +476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStudents(prev => prev.filter(s => s.id !== id));
-    logAction('Records', `Deleted: ${student.name}`);
+    logAction('Records', `Deleted: ${student.name}`, 'StudentRecords');
     notify(`Record for ${student.name} removed from registry.`, 'success');
   };
 
@@ -447,7 +495,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStudents(prev => prev.filter(s => !ids.includes(s.id)));
-    logAction('Records', `Bulk Purge: Removed ${ids.length} records.`);
+    logAction('Records', `Bulk Purge: Removed ${ids.length} records.`, 'StudentRecords');
     notify(`${ids.length} scholar records have been purged.`, 'success');
   };
 
@@ -464,7 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStudents([]);
-    logAction('Records', 'Registry Purge: All records removed.');
+    logAction('Records', 'Registry Purge: All records removed.', 'StudentRecords');
     notify('Entire scholar registry has been purged.', 'success');
   };
 
@@ -488,7 +536,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStaff(prev => [...prev, newUser]);
-    logAction('Staff Management', `Added: ${newUser.name}`);
+    logAction('Staff Management', `Added: ${newUser.name}`, 'UserManagement');
     notify(`Staff account for ${newUser.name} created.`, 'success');
   };
 
@@ -507,8 +555,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStaff(prev => prev.map(u => u.id === updated.id ? updated : u));
-    logAction('Staff Management', `Updated: ${updated.name}`);
+    logAction('Staff Management', `Updated: ${updated.name}`, 'UserManagement');
     notify(`Staff profile ${updated.name} updated.`, 'success');
+  };
+
+  const updateStaffPermissions = async (id: string, permissions: Record<string, ModulePermissions>) => {
+    const user = staff.find(u => u.id === id);
+    if (!user) return;
+    
+    const updated = { ...user, permissions };
+    
+    if (isDatabaseConnected) {
+      try {
+        await fetch('/api/supabase/staff/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ staff: updated })
+        });
+      } catch (e) {
+        notify("Failed to sync permissions with cloud", "error");
+        return;
+      }
+    }
+
+    setStaff(prev => prev.map(u => u.id === id ? updated : u));
+    logAction('Permissions', `Updated granular permissions for: ${user.name}`, 'UserManagement');
+    notify(`Permissions for ${user.name} have been customized.`, 'success');
   };
 
   const deleteStaff = async (id: string) => {
@@ -526,8 +598,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setStaff(prev => prev.filter(u => u.id !== id));
-    logAction('Staff Management', `Deleted staff ID: ${id}`);
-    notify(`Staff access node revoked.`, 'success');
+    logAction('Staff Management', `Purged account ID: ${id}`, 'UserManagement');
+    notify(`Staff account removed from institutional registry.`, 'success');
   };
 
   const addSession = async (session: SessionConfig) => {
@@ -545,7 +617,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setSessions(prev => [...prev, session]);
-    logAction('Configuration', `Added session: ${session.name}`);
+    logAction('Configuration', `Added session: ${session.name}`, 'Sessions');
     notify(`New academic session ${session.name} established.`, 'success');
   };
 
@@ -564,8 +636,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setSettings(newSettings);
-    logAction('Configuration', 'Updated system settings.');
-    notify('System parameters updated.', 'success');
+    logAction('Settings', 'Institutional configuration updated.', 'Settings');
+    notify('System preferences synchronized successfully.', 'success');
   };
 
   const backupDatabase = () => {
@@ -663,16 +735,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       completePostLoginSession,
       notify,
       currentRole: currentUser ? { 
-        id: 'r1', 
+        ...DEFAULT_PERMISSIONS[currentUser.role],
+        ...(currentUser.permissions || {}),
+        id: 'current',
         role: currentUser.role, 
-        canAdd: currentUser.role === 'Admin' || currentUser.role === 'Editor', 
-        canEdit: currentUser.role === 'Admin' || currentUser.role === 'Editor', 
-        canDelete: currentUser.role === 'Admin', 
-        canBulkUpload: currentUser.role === 'Admin' || currentUser.role === 'Editor', 
-        canExport: currentUser.role !== 'Viewer', 
-        canViewAudit: currentUser.role === 'Admin' || currentUser.role === 'Editor', 
-        canLockRecords: currentUser.role === 'Admin' 
-      } : null,
+        canAdd: (currentUser.permissions?.StudentRegistration?.create ?? DEFAULT_PERMISSIONS[currentUser.role].StudentRegistration?.create) ?? false, 
+        canEdit: (currentUser.permissions?.StudentRecords?.edit ?? DEFAULT_PERMISSIONS[currentUser.role].StudentRecords?.edit) ?? false, 
+        canDelete: (currentUser.permissions?.StudentRecords?.delete ?? DEFAULT_PERMISSIONS[currentUser.role].StudentRecords?.delete) ?? false, 
+        canBulkUpload: (currentUser.permissions?.BulkUpload?.view ?? DEFAULT_PERMISSIONS[currentUser.role].BulkUpload?.view) ?? false, 
+        canExport: (currentUser.permissions?.DataExport?.view ?? DEFAULT_PERMISSIONS[currentUser.role].DataExport?.view) ?? false, 
+        canViewAudit: (currentUser.permissions?.AuditTrail?.view ?? DEFAULT_PERMISSIONS[currentUser.role].AuditTrail?.view) ?? false, 
+        canLockRecords: (currentUser.permissions?.StudentRecords?.edit ?? DEFAULT_PERMISSIONS[currentUser.role].StudentRecords?.edit) ?? false
+      } as RolePermissions : null,
       login,
       logout,
       addStudent,
@@ -686,6 +760,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       logAction,
       addStaff,
       updateStaff,
+      updateStaffPermissions,
       deleteStaff,
       addSession,
       backupDatabase,

@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Info,
   X,
-  AlertTriangle
+  AlertTriangle,
+  ShieldAlert
 } from 'lucide-react';
 import { Student, StudentStatus, Gender, ValidationStatus } from '../types';
 import Autocomplete from '../components/Autocomplete';
@@ -20,7 +21,8 @@ import Tooltip from '../components/Tooltip';
 type RegistrationTab = 'identity' | 'supervision' | 'thesis';
 
 const StudentRegistration: React.FC = () => {
-  const { addStudent, students, degrees, programmes, faculty, settings, departments } = useStore();
+  const { addStudent, students, degrees, programmes, faculty, settings, departments, currentRole } = useStore();
+  const canRegister = currentRole?.StudentRegistration?.create;
   const [activeTab, setActiveTab] = useState<RegistrationTab>('identity');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
@@ -173,6 +175,18 @@ const StudentRegistration: React.FC = () => {
         </div>
       </div>
 
+      {!canRegister && (
+        <div className="p-6 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-xl flex items-center space-x-5 shadow-sm">
+          <div className="p-3 bg-rose-500 text-white rounded-xl shadow-sm">
+            <ShieldAlert size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-black text-rose-900 dark:text-rose-400 uppercase tracking-widest">Unauthorized Access</p>
+            <p className="text-xs font-bold text-rose-700 dark:text-rose-500 uppercase tracking-tighter mt-0.5">Your current security tier does not allow provisioning new student records.</p>
+          </div>
+        </div>
+      )}
+
       {success && (
         <div className="p-6 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-xl flex items-center space-x-5 shadow-sm animate-in slide-in-from-top-4">
           <div className="p-3 bg-emerald-500 text-white rounded-xl shadow-sm">
@@ -231,7 +245,12 @@ const StudentRegistration: React.FC = () => {
              </p>
              <button 
                onClick={handleSubmit}
-               className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-[0.3em] hover:bg-indigo-500 transition-all flex items-center justify-center space-x-4 group relative z-10 active:scale-95"
+               disabled={!canRegister}
+               className={`w-full py-4 rounded-xl font-bold text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center space-x-4 group relative z-10 active:scale-95 ${
+                 canRegister 
+                 ? 'bg-indigo-600 text-white hover:bg-indigo-500' 
+                 : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-50'
+               }`}
              >
                <Save size={18} />
                <span>Register Student</span>
@@ -378,7 +397,15 @@ const StudentRegistration: React.FC = () => {
                     <button type="button" onClick={() => setActiveTab('supervision')} className="flex items-center space-x-3 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">
                       <span>Back: Supervision</span>
                     </button>
-                    <button type="submit" className="flex items-center space-x-4 px-12 py-4 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-[0.3em] hover:bg-indigo-500 transition-all active:scale-95 group">
+                    <button 
+                      type="submit" 
+                      disabled={!canRegister}
+                      className={`flex items-center space-x-4 px-12 py-4 rounded-xl font-bold text-xs uppercase tracking-[0.3em] transition-all active:scale-95 group ${
+                        canRegister 
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-500' 
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-50'
+                      }`}
+                    >
                       <Save size={20} className="group-hover:rotate-12 transition-transform" />
                       <span>Register Student</span>
                     </button>

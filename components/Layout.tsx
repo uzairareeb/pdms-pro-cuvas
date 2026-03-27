@@ -58,21 +58,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, [pathname]);
 
   const mainMenuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'Add Student', icon: UserPlus, path: '/registration', permission: 'canAdd' },
-    { name: 'Student List', icon: Users, path: '/records' },
-    { name: 'Readmissions', icon: RefreshCw, path: '/readmission-registry' },
-    { name: 'Synopsis Tracking', icon: ClipboardList, path: '/synopsis-submission' },
-    { name: 'Thesis Tracking', icon: BookOpenCheck, path: '/thesis-tracking' },
-    { name: 'Bulk Data Upload', icon: CloudUpload, path: '/upload', permission: 'canBulkUpload' },
-    { name: 'Data Export (CSV)', icon: Download, path: '/export', permission: 'canExport' },
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/', module: 'Dashboard' },
+    { name: 'Add Student', icon: UserPlus, path: '/registration', module: 'StudentRegistration', action: 'create' },
+    { name: 'Student List', icon: Users, path: '/records', module: 'StudentRecords' },
+    { name: 'Readmissions', icon: RefreshCw, path: '/readmission-registry', module: 'ReadmissionRegistry' },
+    { name: 'Synopsis Tracking', icon: ClipboardList, path: '/synopsis-submission', module: 'SynopsisSubmission' },
+    { name: 'Thesis Tracking', icon: BookOpenCheck, path: '/thesis-tracking', module: 'ThesisTracking' },
+    { name: 'Bulk Data Upload', icon: CloudUpload, path: '/upload', module: 'BulkUpload' },
+    { name: 'Data Export (CSV)', icon: Download, path: '/export', module: 'DataExport' },
   ];
 
   const supportMenuItems = [
-    { name: 'System Reports', icon: BarChart3, path: '/reports' },
-    { name: 'Audit Trail', icon: History, path: '/audit', permission: 'canViewAudit' },
-    { name: 'User Management', icon: Users2, path: '/users', adminOnly: true },
-    { name: 'System Settings', icon: SettingsIcon, path: '/settings', adminOnly: true },
+    { name: 'System Reports', icon: BarChart3, path: '/reports', module: 'SystemReports' },
+    { name: 'Audit Trail', icon: History, path: '/audit', module: 'AuditTrail' },
+    { name: 'User Management', icon: Users2, path: '/users', module: 'UserManagement' },
+    { name: 'System Settings', icon: SettingsIcon, path: '/settings', module: 'Settings' },
   ];
 
   const handleLogout = () => {
@@ -94,7 +94,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const filterItems = (items: any[]) => items.filter(item => {
     if (item.adminOnly && currentUser.role !== 'Admin') return false;
+    
+    if (item.module && currentRole) {
+      const perms = (currentRole as any)[item.module];
+      if (!perms || !perms[item.action || 'view']) return false;
+      return true;
+    }
+    
     if (item.permission && currentRole && !(currentRole as any)[item.permission]) return false;
+    
     return true;
   });
 

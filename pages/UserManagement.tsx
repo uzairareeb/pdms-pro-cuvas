@@ -20,7 +20,67 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { StaffUser } from '../types';
+import { StaffUser, ModulePermissions, UserRole } from '../types';
+
+const MODULE_LIST = [
+  'Dashboard',
+  'StudentRecords',
+  'StudentRegistration',
+  'BulkUpload',
+  'DataExport',
+  'AuditTrail',
+  'SystemReports',
+  'UserManagement',
+  'Settings',
+  'ReadmissionRegistry',
+  'SynopsisSubmission',
+  'ThesisTracking'
+];
+
+const DEFAULT_PERMISSIONS: Record<UserRole, Record<string, ModulePermissions>> = {
+  Admin: {
+    Dashboard: { view: true, create: true, edit: true, delete: true },
+    StudentRecords: { view: true, create: true, edit: true, delete: true },
+    StudentRegistration: { view: true, create: true, edit: true, delete: true },
+    BulkUpload: { view: true, create: true, edit: true, delete: true },
+    DataExport: { view: true, create: true, edit: true, delete: true },
+    AuditTrail: { view: true, create: true, edit: true, delete: true },
+    SystemReports: { view: true, create: true, edit: true, delete: true },
+    UserManagement: { view: true, create: true, edit: true, delete: true },
+    Settings: { view: true, create: true, edit: true, delete: true },
+    ReadmissionRegistry: { view: true, create: true, edit: true, delete: true },
+    SynopsisSubmission: { view: true, create: true, edit: true, delete: true },
+    ThesisTracking: { view: true, create: true, edit: true, delete: true },
+  },
+  Editor: {
+    Dashboard: { view: true, create: true, edit: true, delete: false },
+    StudentRecords: { view: true, create: true, edit: true, delete: false },
+    StudentRegistration: { view: true, create: true, edit: true, delete: false },
+    BulkUpload: { view: true, create: true, edit: true, delete: false },
+    DataExport: { view: true, create: true, edit: true, delete: false },
+    AuditTrail: { view: true, create: false, edit: false, delete: false },
+    SystemReports: { view: true, create: true, edit: true, delete: false },
+    UserManagement: { view: false, create: false, edit: false, delete: false },
+    Settings: { view: false, create: false, edit: false, delete: false },
+    ReadmissionRegistry: { view: true, create: true, edit: true, delete: false },
+    SynopsisSubmission: { view: true, create: true, edit: true, delete: false },
+    ThesisTracking: { view: true, create: true, edit: true, delete: false },
+  },
+  Viewer: {
+    Dashboard: { view: true, create: false, edit: false, delete: false },
+    StudentRecords: { view: true, create: false, edit: false, delete: false },
+    StudentRegistration: { view: false, create: false, edit: false, delete: false },
+    BulkUpload: { view: false, create: false, edit: false, delete: false },
+    DataExport: { view: false, create: false, edit: false, delete: false },
+    AuditTrail: { view: false, create: false, edit: false, delete: false },
+    SystemReports: { view: true, create: false, edit: false, delete: false },
+    UserManagement: { view: false, create: false, edit: false, delete: false },
+    Settings: { view: false, create: false, edit: false, delete: false },
+    ReadmissionRegistry: { view: true, create: false, edit: false, delete: false },
+    SynopsisSubmission: { view: true, create: false, edit: false, delete: false },
+    ThesisTracking: { view: true, create: false, edit: false, delete: false },
+  }
+};
 
 const UserManagement: React.FC = () => {
   const { staff, addStaff, updateStaff, deleteStaff, currentUser, settings } = useStore();
@@ -36,9 +96,34 @@ const UserManagement: React.FC = () => {
     username: '',
     name: '',
     role: 'Viewer' as StaffUser['role'],
-    password: ''
+    password: '',
+    permissions: DEFAULT_PERMISSIONS['Viewer']
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isCustomizingPermissions, setIsCustomizingPermissions] = useState(false);
+
+  const handleRoleChange = (role: StaffUser['role']) => {
+    setFormData({
+      ...formData,
+      role,
+      permissions: DEFAULT_PERMISSIONS[role]
+    });
+    setIsCustomizingPermissions(false);
+  };
+
+  const handlePermissionChange = (module: string, field: keyof ModulePermissions, value: boolean) => {
+    setFormData({
+      ...formData,
+      permissions: {
+        ...formData.permissions,
+        [module]: {
+          ...formData.permissions[module],
+          [field]: value
+        }
+      }
+    });
+    setIsCustomizingPermissions(true);
+  };
 
   const stats = {
     total: staff.length,
@@ -59,8 +144,10 @@ const UserManagement: React.FC = () => {
       username: user.username,
       name: user.name,
       role: user.role,
-      password: ''
+      password: '',
+      permissions: user.permissions || DEFAULT_PERMISSIONS[user.role]
     });
+    setIsCustomizingPermissions(!!user.permissions);
     setIsModalOpen(true);
   };
 
@@ -96,20 +183,25 @@ const UserManagement: React.FC = () => {
     }
 
     if (editingId) {
-      const staffData = { 
+      const staffData: StaffUser = { 
         ...formData, 
-        id: editingId
+        id: editingId,
+        permissions: isCustomizingPermissions ? formData.permissions : undefined
       };
-      updateStaff(staffData as StaffUser);
+      updateStaff(staffData);
       showNotification(`Staff record for ${formData.name} updated.`);
     } else {
-      addStaff(formData as Omit<StaffUser, 'id'>);
-      showNotification(`New access node provisioned for ${formData.name}.`);
+      addStaff({
+        ...formData,
+        permissions: isCustomizingPermissions ? formData.permissions : undefined
+      } as Omit<StaffUser, 'id'>);
+      showNotification(`New access node provisioned for ${formData.name}..`);
     }
     setIsModalOpen(false);
     setEditingId(null);
     setShowPassword(false);
-    setFormData({ username: '', name: '', role: 'Viewer', password: '' });
+    setFormData({ username: '', name: '', role: 'Viewer', password: '', permissions: DEFAULT_PERMISSIONS['Viewer'] });
+    setIsCustomizingPermissions(false);
   };
 
   return (
@@ -136,7 +228,8 @@ const UserManagement: React.FC = () => {
         <button 
           onClick={() => {
             setEditingId(null);
-            setFormData({ username: '', name: '', role: 'Viewer', password: '' });
+            setFormData({ username: '', name: '', role: 'Viewer', password: '', permissions: DEFAULT_PERMISSIONS['Viewer'] });
+            setIsCustomizingPermissions(false);
             setIsModalOpen(true);
           }}
           className="flex items-center justify-center space-x-3 px-8 md:px-10 py-4 md:py-5 bg-[#0a0c10] dark:bg-indigo-600 text-white rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all active:scale-95 w-full md:w-auto"
@@ -391,7 +484,7 @@ const UserManagement: React.FC = () => {
                            <select 
                              className="w-full pl-16 pr-8 py-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-600 font-bold text-sm appearance-none cursor-pointer dark:text-white"
                              value={formData.role || ''}
-                             onChange={e => setFormData({...formData, role: e.target.value as any})}
+                             onChange={e => handleRoleChange(e.target.value as any)}
                            >
                              <option value="Admin">Admin</option>
                              <option value="Editor">Editor</option>
@@ -431,6 +524,79 @@ const UserManagement: React.FC = () => {
                        </button>
                     </div>
                  </div>
+
+                  <div className="space-y-6 pt-5">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                       <div>
+                          <h4 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">Module Access & Permissions</h4>
+                          <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Granular control per academic unit</p>
+                       </div>
+                       <div className="flex items-center space-x-3">
+                          {isCustomizingPermissions && (
+                             <button 
+                               type="button" 
+                               onClick={() => handleRoleChange(formData.role)}
+                               className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase tracking-widest rounded-lg border border-indigo-100 dark:border-indigo-900/50 hover:bg-indigo-100 transition-all"
+                             >
+                               Reset to Role Defaults
+                             </button>
+                          )}
+                          <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${isCustomizingPermissions ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                             {isCustomizingPermissions ? 'Custom Overrides Active' : 'Standard Role Presets'}
+                          </span>
+                       </div>
+                    </div>
+
+                    <div className="overflow-x-auto -mx-8 md:-mx-12 px-8 md:px-12 pb-4">
+                      <table className="w-full text-left text-[10px] border-separate border-spacing-0">
+                        <thead>
+                          <tr className="bg-slate-50/50 dark:bg-slate-800/50">
+                            <th className="px-6 py-4 rounded-tl-xl font-black text-slate-400 uppercase tracking-widest border border-slate-100 dark:border-slate-800">Module</th>
+                            <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-y border-r border-slate-100 dark:border-slate-800">View</th>
+                            <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-y border-r border-slate-100 dark:border-slate-800">Create</th>
+                            <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-y border-r border-slate-100 dark:border-slate-800">Edit</th>
+                            <th className="px-6 py-4 rounded-tr-xl font-black text-slate-400 uppercase tracking-widest text-center border-y border-r border-slate-100 dark:border-slate-800">Delete</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {MODULE_LIST.map((module) => {
+                             const perms = formData.permissions[module] || { view: false, create: false, edit: false, delete: false };
+                             return (
+                               <tr key={module} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors">
+                                 <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300 border-x border-b border-slate-100 dark:border-slate-800">
+                                   {module.replace(/([A-Z])/g, ' $1').trim()}
+                                 </td>
+                                 <td className="px-6 py-4 text-center border-r border-b border-slate-100 dark:border-slate-800">
+                                   <PermissionCheckbox 
+                                     checked={perms.view} 
+                                     onChange={(val) => handlePermissionChange(module, 'view', val)} 
+                                   />
+                                 </td>
+                                 <td className="px-6 py-4 text-center border-r border-b border-slate-100 dark:border-slate-800">
+                                   <PermissionCheckbox 
+                                     checked={perms.create} 
+                                     onChange={(val) => handlePermissionChange(module, 'create', val)} 
+                                   />
+                                 </td>
+                                 <td className="px-6 py-4 text-center border-r border-b border-slate-100 dark:border-slate-800">
+                                   <PermissionCheckbox 
+                                     checked={perms.edit} 
+                                     onChange={(val) => handlePermissionChange(module, 'edit', val)} 
+                                   />
+                                 </td>
+                                 <td className="px-6 py-4 text-center border-r border-b border-slate-100 dark:border-slate-800">
+                                   <PermissionCheckbox 
+                                     checked={perms.delete} 
+                                     onChange={(val) => handlePermissionChange(module, 'delete', val)} 
+                                   />
+                                 </td>
+                               </tr>
+                             );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
               </form>
 
               <div className="p-8 md:p-12 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col md:flex-row items-center justify-end gap-4 md:gap-6 sticky bottom-0">
@@ -482,6 +648,22 @@ const UserManagement: React.FC = () => {
     </div>
   );
 };
+
+const PermissionCheckbox = ({ checked, onChange }: { checked: boolean; onChange: (val: boolean) => void }) => (
+  <div className="flex justify-center">
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+        checked 
+          ? 'bg-indigo-600 border-indigo-600 text-white' 
+          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-transparent'
+      }`}
+    >
+      <CheckCircle2 size={14} className={checked ? 'opacity-100' : 'opacity-0'} />
+    </button>
+  </div>
+);
 
 const StatCard = ({ label, value, icon: Icon, color }: any) => {
   const colors: any = {

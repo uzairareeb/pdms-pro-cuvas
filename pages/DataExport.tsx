@@ -14,7 +14,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const DataExport: React.FC = () => {
-  const { students, backupDatabase, settings } = useStore();
+  const { students, backupDatabase, settings, logAction } = useStore();
 
   const MASTER_HEADERS = [
     'cnic', 'name', 'fatherName', 'regNo', 'gender', 'contactNumber', 
@@ -41,6 +41,7 @@ const DataExport: React.FC = () => {
     link.href = url;
     link.download = `CUVAS_Master_Registry_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+    logAction('Data Export', 'Extracted master registry via Global CSV.', 'DataExport');
   };
 
   const downloadPDF = async () => {
@@ -61,6 +62,7 @@ const DataExport: React.FC = () => {
       data: body,
       landscape: true
     });
+    logAction('Data Export', 'Generated official master registry PDF extraction.', 'DataExport');
   };
 
   return (

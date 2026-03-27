@@ -139,24 +139,24 @@ const StudentRecords: React.FC = () => {
         )}
         
         <div className="flex items-center justify-between md:justify-end gap-3 md:gap-4 border-t md:border-t-0 dark:border-white/5 pt-4 md:pt-0">
-           {selectedIds.length > 0 && currentRole.canDelete && (
-             <button 
-               onClick={() => setIsBulkDeleting(true)}
-               className="px-5 py-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all shadow-sm active:scale-95 flex items-center space-x-2"
-             >
-               <Trash2 size={14} />
-               <span>Delete Selected ({selectedIds.length})</span>
-             </button>
-           )}
-           
-           {students.length > 0 && currentRole.canDelete && (
-             <button 
-               onClick={() => setIsDeletingAll(true)}
-               className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl text-[9px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all shadow-sm active:scale-95"
-             >
-               Delete All Students
-             </button>
-           )}
+            {selectedIds.length > 0 && currentRole?.StudentRecords?.delete && (
+              <button 
+                onClick={() => setIsBulkDeleting(true)}
+                className="px-5 py-2.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all shadow-sm active:scale-95 flex items-center space-x-2"
+              >
+                <Trash2 size={14} />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </button>
+            )}
+            
+            {students.length > 0 && currentRole?.StudentRecords?.delete && (
+              <button 
+                onClick={() => setIsDeletingAll(true)}
+                className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl text-[9px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all shadow-sm active:scale-95"
+              >
+                Delete All Students
+              </button>
+            )}
 
            <div className="flex flex-col items-start md:items-end">
               <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Global Coverage</span>
@@ -377,7 +377,7 @@ const StudentRecords: React.FC = () => {
                       >
                         <Eye size={18} />
                       </Link>
-                      {currentRole.canLockRecords && (
+                      {(currentRole?.StudentRecords?.edit) && (
                         <button 
                           onClick={(e) => handleToggleLock(e, student.id)}
                           className={`p-2.5 rounded-xl transition-all ${
@@ -387,7 +387,7 @@ const StudentRecords: React.FC = () => {
                           {student.isLocked ? <Lock size={18} /> : <Unlock size={18} />}
                         </button>
                       )}
-                      {currentRole.canDelete && (
+                      {currentRole?.StudentRecords?.delete && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); setDeletingId(student.id); }}
                           className="p-3 text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all"

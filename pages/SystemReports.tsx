@@ -21,7 +21,7 @@ const getBase64ImageFromUrl = async (imageUrl: string): Promise<string> => {
 };
 
 const SystemReports: React.FC = () => {
-  const { students, settings } = useStore();
+  const { students, settings, logAction } = useStore();
   const [statusFilter, setStatusFilter] = useState('All');
   const [programFilter, setProgramFilter] = useState('All');
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
@@ -113,6 +113,7 @@ const SystemReports: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    logAction('Data Export', `Generated CSV report: ${filename}`, 'SystemReports');
   };
 
   const downloadPDF = async (reportName: string, data: any[]) => {
@@ -130,6 +131,7 @@ const SystemReports: React.FC = () => {
         data: body,
         landscape: false
       });
+      logAction('Data Export', `Generated PDF report: ${reportName}`, 'SystemReports');
     } catch (err) {
       console.error("Error generating PDF:", err);
       alert("Failed to generate PDF.");
