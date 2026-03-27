@@ -71,21 +71,29 @@ const Dashboard: React.FC = () => {
   const getStatus = (s: any) => String(s.status || '').trim().toLowerCase();
   const normalizeDegree = (val: string) => String(val || '').replace(/\./g, '').trim().toUpperCase();
   
-  const maleCount = students.filter(s => String(s.gender || '').trim().toLowerCase() === 'male').length;
-  const femaleCount = students.filter(s => String(s.gender || '').trim().toLowerCase() === 'female').length;
+  const maleCount = students.filter(s => String(s.gender || '').trim().toLowerCase().includes('male')).length;
+  const femaleCount = students.filter(s => String(s.gender || '').trim().toLowerCase().includes('female')).length;
   
   const isCompleted = (s: any) => {
-    return String(s.status || '').trim().toLowerCase() === 'completed';
+    const st = String(s.status || '').trim().toLowerCase();
+    return st.includes('complete') || st.includes('graduate') || st.includes('done');
   };
   
   const isActiveStatus = (s: any) => {
-    return String(s.status || '').trim().toLowerCase() === 'active';
+    const st = String(s.status || '').trim().toLowerCase();
+    return st.includes('active') && !isCompleted(s);
   };
   
   const activeCount = students.filter(s => isActiveStatus(s)).length;
   const completeCount = students.filter(s => isCompleted(s)).length;
-  const leftCount = students.filter(s => getStatus(s).includes('dropped') || getStatus(s).includes('left')).length;
-  const freezeCount = students.filter(s => getStatus(s).includes('suspended') || getStatus(s).includes('on leave')).length;
+  const leftCount = students.filter(s => {
+    const st = getStatus(s);
+    return st.includes('dropped') || st.includes('left') || st.includes('closed');
+  }).length;
+  const freezeCount = students.filter(s => {
+    const st = getStatus(s);
+    return st.includes('suspended') || st.includes('on leave') || st.includes('frozen');
+  }).length;
   
   const needStatusCount = students.filter(s => 
     s.validationStatus === ValidationStatus.PENDING || 
@@ -98,8 +106,8 @@ const Dashboard: React.FC = () => {
     { label: 'Female Scholars', value: femaleCount, color: '#E83E8C', icon: Users },
     { label: 'Active Registry', value: activeCount, color: '#28A745', icon: Zap },
     { label: 'Completed', value: completeCount, color: '#20C997', icon: CheckCircle },
-    { label: 'Left / Dropped', value: leftCount, color: '#FD7E14', icon: LogOut },
-    { label: 'Frozen / Leave', value: freezeCount, color: '#6F42C1', icon: PauseCircle },
+    { label: 'Left/Dropped', value: leftCount, color: '#FD7E14', icon: LogOut },
+    { label: 'Frozen/Leave', value: freezeCount, color: '#6F42C1', icon: PauseCircle },
     { label: 'Pending Audit', value: needStatusCount, color: '#DC3545', icon: AlertCircle },
   ];
 
@@ -245,66 +253,77 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Active Students Register */}
-          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <div>
+          {/* Active Students Card - Comprehensive List */}
+          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm mb-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+              <Zap size={120} className="text-indigo-900" />
+            </div>
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="flex flex-col">
                 <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
-                  <Zap size={20} className="mr-3 text-indigo-600" />
+                  <Zap size={20} className="mr-3 text-indigo-600 animate-pulse" />
                   Active Students Card
                 </h3>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Currently Active in Database</p>
               </div>
-              <div className="flex items-center gap-4">
-                 <div className="hidden xl:flex flex-col items-end mr-6">
-                    <span className="text-xl font-black text-indigo-600 block tabular-nums">{activeCount}</span>
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-right">Active Count</span>
+              <div className="flex items-center gap-6">
+                 <div className="flex flex-col items-end">
+                    <span className="text-2xl font-black text-indigo-600 block tabular-nums">{activeCount}</span>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Scholars Active</span>
                  </div>
                  <button 
                   onClick={() => navigate('/records')}
-                  className="px-5 py-2.5 bg-slate-50 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all border border-slate-200"
+                  className="px-6 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all border border-indigo-100/50 shadow-sm"
                 >
-                  Scholar Register
+                  Registry Access
                 </button>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            
+            <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Serial</th>
-                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Scholar Name</th>
-                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Program</th>
-                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Department</th>
-                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Gender</th>
+                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Scholar Profile</th>
+                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Academic Info</th>
+                    <th className="pb-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Identifier</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {students
                     .filter(s => isActiveStatus(s))
-                    .slice(-5)
                     .reverse()
-                    .map((student, idx) => (
+                    .map((student) => (
                     <tr key={student.id} className="group hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => navigate(`/students/${student.id}`)}>
-                      <td className="py-4 text-xs font-bold text-slate-400">#0{idx + 1}</td>
-
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-black text-xs">
+                      <td className="py-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black text-sm shadow-sm border border-indigo-100/50 transition-transform group-hover:scale-110">
                             {student.name[0]}
                           </div>
-                          <span className="text-sm font-bold text-slate-900">{student.name}</span>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black text-slate-900 mb-0.5">{student.name}</span>
+                            <span className="text-[9px] font-bold text-slate-400 tracking-tight">{student.fatherName}</span>
+                          </div>
                         </div>
                       </td>
-                      <td className="py-4">
-                        <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-tighter">{student.degree}</span>
+                      <td className="py-5">
+                        <div className="flex flex-col gap-1">
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg text-[8px] font-black uppercase tracking-tighter w-fit">{student.degree} / {student.programme}</span>
+                          <span className="text-[9px] font-bold text-slate-500">{student.department}</span>
+                        </div>
                       </td>
-                      <td className="py-4 text-xs font-bold text-slate-500">{student.department}</td>
-                      <td className="py-4 text-right">
-                        <span className={`text-[9px] font-black uppercase tracking-widest ${student.gender === Gender.MALE ? 'text-blue-500' : 'text-pink-500'}`}>{student.gender}</span>
+                      <td className="py-5 text-right">
+                        <span className="text-[10px] font-black text-indigo-600 tabular-nums bg-indigo-50 px-2.5 py-1 rounded-full">{student.regNo}</span>
                       </td>
                     </tr>
                   ))}
+                  {activeCount === 0 && (
+                    <tr>
+                      <td colSpan={3} className="py-20 text-center">
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">No active scholars found in database registry</p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
