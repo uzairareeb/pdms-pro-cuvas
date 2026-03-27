@@ -14,7 +14,8 @@ import {
   RefreshCw,
   AlertTriangle,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  Eye
 } from 'lucide-react';
 import { Student, StudentStatus } from '../types';
 import { jsPDF } from 'jspdf';
@@ -199,62 +200,67 @@ const ReadmissionRegistry: React.FC = () => {
             <table className="w-full text-left text-sm border-separate border-spacing-0 min-w-[1200px]">
               <thead className="bg-slate-50/50 text-slate-400 uppercase text-[9px] font-black tracking-[0.3em]">
                 <tr>
+                  <th className="px-6 py-10 border-b border-slate-100 text-center w-12">Sr.</th>
                   <th className="px-10 py-10 border-b border-slate-100">Scholar Details</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Placement</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Supervisor</th>
-                  <th className="px-10 py-10 border-b border-slate-100 text-center">Last Active Sem</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Session</th>
+                  <th className="px-10 py-10 border-b border-slate-100">Placement & Session</th>
+                  <th className="px-10 py-10 border-b border-slate-100">Supervision</th>
+                  <th className="px-10 py-10 border-b border-slate-100 text-center">Last Semester</th>
                   <th className="px-10 py-10 border-b border-slate-100 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(student => (
+                {filtered.map((student, index) => (
                   <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-10 text-center">
+                      <span className="text-[10px] font-black text-slate-400 tabular-nums">{index + 1}</span>
+                    </td>
                     <td className="px-10 py-10">
                       <div className="flex items-center space-x-5">
-                         <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-black transition-all group-hover:bg-rose-600 group-hover:text-white">
+                         <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black transition-all group-hover:bg-rose-600 group-hover:text-white border border-rose-100/50">
                            {student.name[0]}
                          </div>
                          <div>
-                            <p className="font-black text-slate-900 text-base leading-none">{student.name}</p>
+                            <p className="font-black text-slate-900 text-base leading-none tracking-tight">{student.name}</p>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">{student.regNo || '---'}</p>
                          </div>
                       </div>
                     </td>
                     <td className="px-10 py-10">
-                       <div className="flex flex-col space-y-1">
-                          <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{student.degree}</span>
-                          <span className="text-[11px] font-bold text-slate-700 truncate max-w-[200px]">{student.department}</span>
+                       <div className="flex flex-col space-y-1.5">
+                          <div className="flex items-center space-x-2">
+                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase rounded border border-indigo-100">{student.degree}</span>
+                            <span className="text-[11px] font-bold text-slate-700 truncate max-w-[180px]">{student.programme}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                            <Calendar size={12} className="opacity-50" />
+                            <span>{student.session}</span>
+                            <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                            <span className="truncate">{student.department}</span>
+                          </div>
                        </div>
                     </td>
                     <td className="px-10 py-10">
-                       <div className="flex items-center space-x-3 text-slate-500 font-bold text-xs">
-                          <User size={14} className="text-slate-300" />
-                          <span>{student.supervisorName || '---'}</span>
+                       <div className="flex items-center space-x-3 text-slate-600 font-bold text-xs">
+                          <div className="p-2 bg-slate-50 rounded-lg"><User size={14} className="text-slate-400" /></div>
+                          <span className="truncate max-w-[150px]">{student.supervisorName || '---'}</span>
                        </div>
                     </td>
                     <td className="px-10 py-10 text-center">
-                       <span className="px-4 py-2 bg-rose-50 rounded-lg text-[10px] font-black uppercase border border-rose-100 text-rose-600">Semester {student.currentSemester}</span>
-                    </td>
-                    <td className="px-10 py-10">
-                       <div className="flex items-center space-x-3 text-slate-500 font-bold text-xs">
-                          <Calendar size={14} className="text-slate-300" />
-                          <span>{student.session}</span>
-                       </div>
+                       <span className="px-4 py-1.5 bg-rose-50 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 text-rose-600">Semester {student.currentSemester}</span>
                     </td>
                     <td className="px-10 py-10 text-right">
                        <div className="flex items-center justify-end space-x-3">
                           <Link 
                             to={`/students/${student.id}`}
-                            className="p-3 text-slate-300 hover:text-indigo-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-100"
+                            className="p-3 text-slate-300 hover:text-indigo-600 hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-slate-100"
                             title="View Profile"
                           >
-                            <User size={18} />
+                            <Eye size={18} />
                           </Link>
                           <button 
                             onClick={() => setReadmitId(student.id)}
                             disabled={!currentRole?.canEdit}
-                            className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-20"
+                            className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md disabled:opacity-20 active:scale-95"
                           >
                             <RefreshCw size={14} />
                             <span>Readmit</span>

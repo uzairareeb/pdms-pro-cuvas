@@ -291,7 +291,7 @@ const StudentRecords: React.FC = () => {
           <table className="w-full text-left text-sm border-separate border-spacing-0 min-w-full">
             <thead className="bg-slate-50/50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-500 uppercase text-[9px] font-black tracking-[0.25em]">
               <tr>
-                <th className="px-6 md:px-10 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800 w-10">
+                <th className="px-4 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800 w-10">
                   <input 
                     type="checkbox"
                     checked={paginatedStudents.length > 0 && selectedIds.length === paginatedStudents.length}
@@ -299,11 +299,13 @@ const StudentRecords: React.FC = () => {
                     className="w-5 h-5 rounded-lg border-slate-200 dark:border-slate-700 text-indigo-600 focus:ring-indigo-600/20 transition-all cursor-pointer"
                   />
                 </th>
-                <th className="px-6 md:px-10 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800">Scholar Details</th>
-                <th className="px-6 md:px-10 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800 hidden lg:table-cell">Placement</th>
-                <th className="px-6 md:px-10 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800">
+                <th className="px-4 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800 text-center w-12">Sr.</th>
+                <th className="px-6 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800">Scholar Details</th>
+                <th className="px-6 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800 hidden lg:table-cell">Placement & Session</th>
+                <th className="px-6 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800 hidden xl:table-cell">Supervision</th>
+                <th className="px-6 py-8 md:py-10 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center">
-                    <span>Status Node</span>
+                    <span>Status</span>
                     <Tooltip content="Current academic status and administrative validation state." />
                   </div>
                 </th>
@@ -317,7 +319,7 @@ const StudentRecords: React.FC = () => {
                   onClick={() => setPreviewStudent(student)}
                   className={`cursor-pointer hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors group ${student.isLocked ? 'bg-amber-50/15 dark:bg-amber-900/5' : ''} ${previewStudent?.id === student.id ? 'bg-indigo-50/60 dark:bg-indigo-900/20' : ''}`}
                 >
-                  <td className="px-6 md:px-10 py-6 md:py-8" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-6 md:py-8" onClick={(e) => e.stopPropagation()}>
                     <input 
                       type="checkbox"
                       checked={selectedIds.includes(student.id)}
@@ -325,9 +327,14 @@ const StudentRecords: React.FC = () => {
                       className="w-5 h-5 rounded-lg border-slate-200 dark:border-slate-700 text-indigo-600 focus:ring-indigo-600/20 transition-all cursor-pointer"
                     />
                   </td>
-                  <td className="px-6 md:px-10 py-6 md:py-8">
-                    <div className="flex items-center space-x-4 md:space-x-6">
-                      <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center font-black text-lg md:text-xl transition-all shadow-sm ${
+                  <td className="px-4 py-6 md:py-8 text-center">
+                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-600 tabular-nums">
+                      {(currentPage - 1) * itemsPerPage + paginatedStudents.indexOf(student) + 1}
+                    </span>
+                  </td>
+                  <td className="px-6 py-6 md:py-8">
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg transition-all shadow-sm ${
                         student.isLocked 
                         ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' 
                         : (previewStudent?.id === student.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/10 group-hover:text-indigo-600 dark:group-hover:text-indigo-400')
@@ -335,37 +342,45 @@ const StudentRecords: React.FC = () => {
                         {student.isLocked ? <Lock size={20} /> : student.name[0]}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-black text-slate-900 dark:text-white text-base md:text-lg flex items-center tracking-tight truncate leading-none">
+                        <div className="font-black text-slate-900 dark:text-white text-base md:text-md tracking-tight truncate leading-none">
                           {student.name}
                         </div>
-                        <p className="text-[9px] md:text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1.5 md:mt-2 truncate">{student.regNo}</p>
+                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1.5 truncate">{student.regNo}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 md:px-10 py-6 md:py-8 hidden lg:table-cell">
+                  <td className="px-6 py-6 md:py-8 hidden lg:table-cell">
                     <div className="min-w-0">
-                      <div className="flex items-center space-x-3 truncate">
-                         <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[9px] font-black uppercase rounded-lg shrink-0 border border-indigo-100 dark:border-indigo-800/50">{student.degree}</span>
-                         <span className="text-[11px] font-black text-slate-800 dark:text-slate-300 uppercase tracking-tighter truncate">{student.programme}</span>
+                      <div className="flex items-center space-x-3 mb-1.5">
+                         <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase rounded-lg border border-indigo-100 dark:border-indigo-800/50">{student.degree}</span>
+                         <span className="text-[10px] font-black text-slate-800 dark:text-slate-300 uppercase truncate">{student.programme}</span>
                       </div>
-                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-2 truncate">{student.department}</p>
+                      <div className="flex items-center space-x-2 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                        <span>{student.session}</span>
+                        <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                        <span className="truncate">{student.department}</span>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 md:px-10 py-6 md:py-8">
+                  <td className="px-6 py-6 md:py-8 hidden xl:table-cell">
+                    <div className="flex items-center space-x-3 text-slate-600 dark:text-slate-400">
+                      <User size={14} className="opacity-40" />
+                      <span className="text-xs font-bold truncate max-w-[180px]">{student.supervisorName || '---'}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-6 md:py-8">
                     <div className="flex flex-col space-y-2">
-                        <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border w-fit ${
+                        <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border w-fit ${
                           student.status === StudentStatus.ACTIVE ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/50' :
                           student.status === StudentStatus.COMPLETED ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800/50' :
                           'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                         }`}>
                           {student.status}
                         </span>
-                        <span className={`text-[8px] md:text-[9px] font-black uppercase tracking-widest flex items-center ${
-                          student.validationStatus === ValidationStatus.APPROVED ? 'text-emerald-500' : 'text-amber-500'
-                        }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full mr-2 ${student.validationStatus === ValidationStatus.APPROVED ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                          {student.validationStatus}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${student.validationStatus === ValidationStatus.APPROVED ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                          <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{student.validationStatus}</span>
+                        </div>
                     </div>
                   </td>
                   <td className="px-6 md:px-10 py-6 md:py-8 text-right">
