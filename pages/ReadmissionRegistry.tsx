@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Calendar,
   ArrowRight,
-  Eye
+  Eye,
+  X
 } from 'lucide-react';
 import { Student, StudentStatus } from '../types';
 import { jsPDF } from 'jspdf';
@@ -30,9 +31,12 @@ const ReadmissionRegistry: React.FC = () => {
   const [filterDept, setFilterDept] = useState<string>('');
   const [readmitId, setReadmitId] = useState<string | null>(null);
 
-  // Filter ONLY Dropped students
-  const droppedStudents = useMemo(() => {
-    return students.filter(s => s.status === StudentStatus.DROPPED);
+  // Filter students who are DROPPED or have an active Readmission Request
+  const readmissionCandidates = useMemo(() => {
+    return students.filter(s => 
+      s.status === StudentStatus.DROPPED || 
+      (s.readmissionStatus && s.readmissionStatus !== 'Approved')
+    );
   }, [students]);
 
   // Helper for dot-agnostic degree comparison
@@ -40,35 +44,31 @@ const ReadmissionRegistry: React.FC = () => {
 
   // Master Filter Engine
   const filtered = useMemo(() => {
-    return droppedStudents.filter(s => {
-      // 1. Degree Filter
+    return readmissionCandidates.filter(s => {
+      // ... filters ...
       const matchesDegree = !filterDegree || normalizeDegree(s.degree) === normalizeDegree(filterDegree);
       if (!matchesDegree) return false;
 
-      // 2. Department Filter
       const matchesDept = !filterDept || s.department === filterDept;
       if (!matchesDept) return false;
 
-      // 3. Robust Search Logic
       const searchStr = searchTerm.toLowerCase();
-      const matchesSearch = 
-        (s.name?.toLowerCase().includes(searchStr)) || 
-        (s.regNo?.toLowerCase().includes(searchStr)) ||
-        (s.programme?.toLowerCase().includes(searchStr)) ||
-        (s.supervisorName?.toLowerCase().includes(searchStr));
-      
-      return matchesSearch;
+      return (
+        s.name?.toLowerCase().includes(searchStr) || 
+        s.regNo?.toLowerCase().includes(searchStr) ||
+        s.programme?.toLowerCase().includes(searchStr)
+      );
     });
-  }, [droppedStudents, searchTerm, filterDegree, filterDept]);
+  }, [readmissionCandidates, searchTerm, filterDegree, filterDept]);
 
   const stats = useMemo(() => {
     return {
-      total: droppedStudents.length,
+      total: readmissionCandidates.length,
       filtered: filtered.length,
-      mPhil: droppedStudents.filter(s => normalizeDegree(s.degree) === 'MPHIL').length,
-      phd: droppedStudents.filter(s => normalizeDegree(s.degree) === 'PHD').length
+      pending: readmissionCandidates.filter(s => s.readmissionStatus === 'Pending').length,
+      rejected: readmissionCandidates.filter(s => s.readmissionStatus === 'Rejected').length
     };
-  }, [droppedStudents, filtered]);
+  }, [readmissionCandidates, filtered]);
 
   const handleReadmit = (student: Student) => {
     const nextSemester = (student.currentSemester || 1) + 1;
@@ -140,10 +140,10 @@ const ReadmissionRegistry: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full xl:w-auto">
-           <MetricsCard label="Total Dropped" value={stats.total} color="rose" icon={AlertTriangle} />
-           <MetricsCard label="M.Phil Candidates" value={stats.mPhil} color="indigo" icon={GraduationCap} />
+           <MetricsCard label="Total Candidates" value={stats.total} color="rose" icon={AlertTriangle} />
+           <MetricsCard label="Pending Review" value={stats.pending} color="amber" icon={RefreshCw} />
            <div className="hidden md:block">
-             <MetricsCard label="PhD Candidates" value={stats.phd} color="emerald" icon={RefreshCw} />
+             <MetricsCard label="Previously Rejected" value={stats.rejected} color="slate" icon={UserX} />
            </div>
         </div>
       </div>
@@ -201,11 +201,12 @@ const ReadmissionRegistry: React.FC = () => {
               <thead className="bg-slate-50/50 text-slate-400 uppercase text-[9px] font-black tracking-[0.3em]">
                 <tr>
                   <th className="px-6 py-10 border-b border-slate-100 text-center w-12">Sr.</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Scholar Details</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Placement & Session</th>
-                  <th className="px-10 py-10 border-b border-slate-100">Supervision</th>
-                  <th className="px-10 py-10 border-b border-slate-100 text-center">Last Semester</th>
-                  <th className="px-10 py-10 border-b border-slate-100 text-right">Action</th>
+                  <th className="px-10 py-10 border-b border-slate-100">Student Identity</th>
+                  <th className="px-10 py-10 border-b border-slate-100">Program / Department</th>
+                  <th className="px-10 py-10 border-b border-slate-100">Previous Status</th>
+                  <th className="px-10 py-10 border-b border-slate-100">Readmission Status</th>
+                  <th className="px-10 py-10 border-b border-slate-100">Request Date</th>
+                  <th className="px-10 py-10 border-b border-slate-100 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -215,56 +216,77 @@ const ReadmissionRegistry: React.FC = () => {
                       <span className="text-[10px] font-black text-slate-400 tabular-nums">{index + 1}</span>
                     </td>
                     <td className="px-10 py-10">
-                      <div className="flex items-center space-x-5">
-                         <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black transition-all group-hover:bg-rose-600 group-hover:text-white border border-rose-100/50">
+                      <div className="flex items-center space-x-4">
+                         <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center font-black group-hover:bg-indigo-600 group-hover:text-white transition-all">
                            {student.name[0]}
                          </div>
                          <div>
-                            <p className="font-black text-slate-900 text-base leading-none tracking-tight">{student.name}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">{student.regNo || '---'}</p>
+                            <p className="font-black text-slate-900 text-sm tracking-tight">{student.name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{student.regNo || '---'}</p>
                          </div>
                       </div>
                     </td>
                     <td className="px-10 py-10">
-                       <div className="flex flex-col space-y-1.5">
-                          <div className="flex items-center space-x-2">
-                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase rounded border border-indigo-100">{student.degree}</span>
-                            <span className="text-[11px] font-bold text-slate-700 truncate max-w-[180px]">{student.programme}</span>
-                          </div>
-                          <div className="flex items-center space-x-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                            <Calendar size={12} className="opacity-50" />
-                            <span>{student.session}</span>
-                            <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                            <span className="truncate">{student.department}</span>
-                          </div>
+                       <div className="flex flex-col">
+                          <span className="text-[11px] font-bold text-slate-700">{student.programme}</span>
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">{student.department}</span>
                        </div>
                     </td>
                     <td className="px-10 py-10">
-                       <div className="flex items-center space-x-3 text-slate-600 font-bold text-xs">
-                          <div className="p-2 bg-slate-50 rounded-lg"><User size={14} className="text-slate-400" /></div>
-                          <span className="truncate max-w-[150px]">{student.supervisorName || '---'}</span>
+                       <span className={`px-3 py-1 bg-rose-50 rounded-lg text-[9px] font-black uppercase text-rose-600 border border-rose-100`}>
+                         {student.previousStatus || student.status}
+                       </span>
+                    </td>
+                    <td className="px-10 py-10">
+                       <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                         student.readmissionStatus === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                         student.readmissionStatus === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                         'bg-amber-50 text-amber-600 border-amber-100'
+                       }`}>
+                         {student.readmissionStatus || 'Pending Request'}
+                       </span>
+                    </td>
+                    <td className="px-10 py-10">
+                       <div className="flex items-center space-x-2 text-slate-500 font-bold text-xs">
+                          <Calendar size={12} className="opacity-40" />
+                          <span>{student.readmissionDate || 'N/A'}</span>
                        </div>
                     </td>
-                    <td className="px-10 py-10 text-center">
-                       <span className="px-4 py-1.5 bg-rose-50 rounded-lg text-[9px] font-black uppercase tracking-widest border border-rose-100 text-rose-600">Semester {student.currentSemester}</span>
-                    </td>
                     <td className="px-10 py-10 text-right">
-                       <div className="flex items-center justify-end space-x-3">
+                       <div className="flex items-center justify-end space-x-2">
                           <Link 
                             to={`/students/${student.id}`}
-                            className="p-3 text-slate-300 hover:text-indigo-600 hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-slate-100"
+                            className="p-2.5 text-slate-300 hover:text-indigo-600 hover:bg-white rounded-xl transition-all border border-transparent hover:border-slate-100"
                             title="View Profile"
                           >
-                            <Eye size={18} />
+                            <Eye size={16} />
                           </Link>
-                          <button 
-                            onClick={() => setReadmitId(student.id)}
-                            disabled={!currentRole?.canEdit}
-                            className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md disabled:opacity-20 active:scale-95"
-                          >
-                            <RefreshCw size={14} />
-                            <span>Readmit</span>
-                          </button>
+                          {currentRole?.ReadmissionRegistry?.edit && (
+                            <>
+                              <button 
+                                onClick={() => {
+                                  updateStudent({ ...student, readmissionStatus: 'Approved', status: StudentStatus.ACTIVE, readmissionDate: new Date().toLocaleDateString() });
+                                  logAction('Readmission', `Approved readmission for ${student.name}`, 'ReadmissionRegistry');
+                                  notify(`${student.name} Readmission Approved`, 'success');
+                                }}
+                                className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
+                                title="Approve Request"
+                              >
+                                <RefreshCw size={16} />
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  updateStudent({ ...student, readmissionStatus: 'Rejected', readmissionDate: new Date().toLocaleDateString() });
+                                  logAction('Readmission', `Rejected readmission for ${student.name}`, 'ReadmissionRegistry');
+                                  notify(`${student.name} Readmission Rejected`, 'error');
+                                }}
+                                className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all border border-rose-100"
+                                title="Reject Request"
+                              >
+                                <X size={16} />
+                              </button>
+                            </>
+                          )}
                        </div>
                     </td>
                   </tr>

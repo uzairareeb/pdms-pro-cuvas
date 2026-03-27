@@ -55,6 +55,11 @@ export interface Student {
   validationDate: string;
   comments: string;
   
+  // Readmission Management
+  previousStatus?: StudentStatus;
+  readmissionStatus?: 'Pending' | 'Approved' | 'Rejected';
+  readmissionDate?: string;
+  
   isLocked: boolean;
 }
 
