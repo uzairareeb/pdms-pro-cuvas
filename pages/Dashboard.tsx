@@ -66,15 +66,22 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Metric Calculations
   const totalCount = students.length;
-  const maleCount = students.filter(s => s.gender === Gender.MALE).length;
-  const femaleCount = students.filter(s => s.gender === Gender.FEMALE).length;
-  const activeCount = students.filter(s => s.status === StudentStatus.ACTIVE).length;
-  const completeCount = students.filter(s => s.status === StudentStatus.COMPLETED).length;
-  const leftCount = students.filter(s => s.status === StudentStatus.DROPPED).length;
-  const freezeCount = students.filter(s => s.status === StudentStatus.SUSPENDED || s.status === StudentStatus.ON_LEAVE).length;
-  const needStatusCount = students.filter(s => s.validationStatus === ValidationStatus.PENDING || s.validationStatus === ValidationStatus.RETURNED).length;
+  // Robust filtering (case-insensitive and trimmed)
+  const getStatus = (s: any) => String(s.status || '').trim().toLowerCase();
+  
+  const maleCount = students.filter(s => String(s.gender).toLowerCase() === 'male').length;
+  const femaleCount = students.filter(s => String(s.gender).toLowerCase() === 'female').length;
+  
+  const activeCount = students.filter(s => getStatus(s) === 'active').length;
+  const completeCount = students.filter(s => getStatus(s) === 'completed').length;
+  const leftCount = students.filter(s => getStatus(s) === 'dropped').length;
+  const freezeCount = students.filter(s => getStatus(s) === 'suspended' || getStatus(s) === 'on leave').length;
+  
+  const needStatusCount = students.filter(s => 
+    s.validationStatus === ValidationStatus.PENDING || 
+    s.validationStatus === ValidationStatus.RETURNED
+  ).length;
 
   const kpiGrid = [
     { label: 'Total Scholars', value: totalCount, color: '#007BFF', icon: Layers },
@@ -157,22 +164,22 @@ const Dashboard: React.FC = () => {
             <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[
-                  { semester: 'Sem 1', PhD: 45, MPhil: 32 },
-                  { semester: 'Sem 2', PhD: 52, MPhil: 40 },
-                  { semester: 'Sem 3', PhD: 48, MPhil: 55 },
-                  { semester: 'Sem 4', PhD: 61, MPhil: 59 },
-                  { semester: 'Sem 5', PhD: 75, MPhil: 70 },
-                  { semester: 'Sem 6', PhD: 88, MPhil: 82 },
+                  { stage: 'GS-2', PhD: students.filter(s => s.degree === 'PhD' && s.gs2CourseWork === 'Completed').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.gs2CourseWork === 'Completed').length },
+                  { stage: 'Synopsis', PhD: students.filter(s => s.degree === 'PhD' && s.synopsis === 'Approved').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.synopsis === 'Approved').length },
+                  { stage: 'GS-4', PhD: students.filter(s => s.degree === 'PhD' && s.gs4Form === 'Approved').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.gs4Form === 'Approved').length },
+                  { stage: 'Thesis', PhD: students.filter(s => s.degree === 'PhD' && s.finalThesisStatus === 'Approved').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.finalThesisStatus === 'Approved').length },
+                  { stage: 'COE', PhD: students.filter(s => s.degree === 'PhD' && s.thesisSentToCOE === 'Yes').length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.thesisSentToCOE === 'Yes').length },
+                  { stage: 'Done', PhD: students.filter(s => s.degree === 'PhD' && s.status === StudentStatus.COMPLETED).length, MPhil: students.filter(s => s.degree === 'M.Phil' && s.status === StudentStatus.COMPLETED).length },
                 ]}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="semester" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900, fill: '#94a3b8'}} dy={10} />
+                  < CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="stage" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900, fill: '#94a3b8'}} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900, fill: '#94a3b8'}} />
                   <Tooltip 
                     cursor={{fill: '#f8fafc'}}
                     contentStyle={{ borderRadius: '12px', border: 'none', background: '#fff', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
-                  <Bar dataKey="PhD" fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={30} />
-                  <Bar dataKey="MPhil" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
+                  <Bar dataKey="PhD" fill="#4f46e5" radius={[4, 4, 0, 0]} barSize={25} />
+                  <Bar dataKey="MPhil" fill="#10b981" radius={[4, 4, 0, 0]} barSize={25} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -183,10 +190,10 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
-                  <Users size={20} className="mr-3 text-indigo-600" />
-                  Recent Scholars
+                  <Zap size={20} className="mr-3 text-indigo-600" />
+                  Active Scholars Register
                 </h3>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Latest additions to the registry</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Currently enrolled in programs</p>
               </div>
               <button 
                 onClick={() => navigate('/records')}
@@ -207,9 +214,14 @@ const Dashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {students.slice(-5).reverse().map((student, idx) => (
+                  {students
+                    .filter(s => s.status === StudentStatus.ACTIVE)
+                    .slice(-5)
+                    .reverse()
+                    .map((student, idx) => (
                     <tr key={student.id} className="group hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => navigate(`/students/${student.id}`)}>
                       <td className="py-4 text-xs font-bold text-slate-400">#0{idx + 1}</td>
+
                       <td className="py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-black text-xs">
@@ -246,6 +258,43 @@ const Dashboard: React.FC = () => {
               {currentRole?.canExport && <QuickProtocol icon={Download} label="Data Extraction" path="/export" />}
               <QuickProtocol icon={FileBarChart} label="Report Suite" path="/reports" />
               {currentRole?.canViewAudit && <QuickProtocol icon={History} label="Audit Logs" path="/audit" />}
+            </div>
+          </div>
+
+          {/* Recently Completed Scholars */}
+          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase flex items-center">
+                <CheckCircle size={20} className="mr-3 text-emerald-500" />
+                Completed Scholars
+              </h3>
+            </div>
+            <div className="space-y-4">
+               {students
+                 .filter(s => s.status === StudentStatus.COMPLETED)
+                 .slice(-3)
+                 .reverse()
+                 .map(student => (
+                   <div 
+                    key={student.id} 
+                    onClick={() => navigate(`/students/${student.id}`)}
+                    className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 cursor-pointer hover:border-emerald-200 transition-all group"
+                   >
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-black text-xs">
+                          {student.name[0]}
+                        </div>
+                        <div>
+                           <p className="text-xs font-bold text-slate-900 truncate max-w-[120px]">{student.name}</p>
+                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{student.regNo}</p>
+                        </div>
+                     </div>
+                     <ChevronRight size={14} className="text-slate-300 group-hover:text-emerald-500" />
+                   </div>
+                 ))}
+               {students.filter(s => s.status === StudentStatus.COMPLETED).length === 0 && (
+                 <p className="text-[10px] text-center text-slate-400 py-4 font-bold uppercase tracking-widest">No graduates recorded yet</p>
+               )}
             </div>
           </div>
 
