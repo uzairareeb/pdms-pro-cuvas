@@ -272,7 +272,7 @@ const StudentRecords: React.FC = () => {
               </div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[9px] font-bold text-slate-500 truncate">{student.degree} · {student.programme}</span>
-                <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase border ${getStatusStyle(student.status)}`}>
+                <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wide border ${getStatusStyle(student.status)}`}>
                   {student.status}
                 </span>
               </div>
@@ -362,15 +362,9 @@ const StudentRecords: React.FC = () => {
 
                     {/* Status */}
                     <td className="px-5 py-4">
-                      <div className="flex flex-col gap-1.5">
-                        <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wide border w-fit ${getStatusStyle(student.status)}`}>
-                          {student.status}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <div className={`w-1.5 h-1.5 rounded-full ${validStyle.dot}`} />
-                          <span className={`text-[8px] font-black uppercase tracking-widest ${validStyle.text}`}>{student.validationStatus}</span>
-                        </div>
-                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wide border w-fit ${getStatusStyle(student.status)}`}>
+                        {student.status}
+                      </span>
                     </td>
 
                     {/* Actions */}
