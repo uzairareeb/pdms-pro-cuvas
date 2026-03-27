@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { FileBarChart, FileText, PieChart, Users, Download, ShieldCheck, Filter, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { normalizeStatus } from '../utils/dashboardMetrics';
 
 const getBase64ImageFromUrl = async (imageUrl: string): Promise<string> => {
   try {
@@ -31,8 +32,7 @@ const SystemReports: React.FC = () => {
 
   const filterStudents = () => {
     return students.filter(s => {
-      const currentStatus = String(s.status || '').trim().toLowerCase();
-      const matchStatus = statusFilter === 'All' || currentStatus === statusFilter.toLowerCase();
+      const matchStatus = statusFilter === 'All' || normalizeStatus(s.status) === normalizeStatus(statusFilter);
       const matchProgram = programFilter === 'All' || s.programme === programFilter;
       return matchStatus && matchProgram;
     });
@@ -46,9 +46,9 @@ const SystemReports: React.FC = () => {
           const key = `${s.department} - ${s.programme}`;
           if (!acc[key]) acc[key] = { Programme: key, Total: 0, Active: 0, Completed: 0 };
           acc[key].Total++;
-          const currentStatus = String(s.status || '').trim().toLowerCase();
-          if (currentStatus === 'active') acc[key].Active++;
-          if (currentStatus === 'completed') acc[key].Completed++;
+          const st = normalizeStatus(s.status);
+          if (st === 'active') acc[key].Active++;
+          if (st === 'completed') acc[key].Completed++;
           return acc;
         }, {});
         return Object.values(summary);

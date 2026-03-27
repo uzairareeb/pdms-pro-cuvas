@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { Student, StudentStatus, ValidationStatus } from '../types';
 import Tooltip from '../components/Tooltip';
 import { motion } from 'framer-motion';
+import { normalizeStatus } from '../utils/dashboardMetrics';
 
 const StudentRecords: React.FC = () => {
   const { 
@@ -59,7 +60,7 @@ const StudentRecords: React.FC = () => {
     const matchesDegree = filterDegree === '' || normalizeDegree(s.degree) === normalizeDegree(filterDegree);
     const matchesDept = filterDept === '' || s.department === filterDept;
     const matchesStatus = filterStatus === '' || 
-      String(s.status || '').trim().toLowerCase() === filterStatus.toLowerCase();
+      normalizeStatus(s.status) === normalizeStatus(filterStatus);
     const matchesValidation = filterValidation === '' || s.validationStatus === filterValidation;
 
     return matchesSearch && matchesDegree && matchesDept && matchesStatus && matchesValidation;
