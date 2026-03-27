@@ -128,33 +128,7 @@ const Login: React.FC = () => {
               </button>
             </form>
 
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="h-[1px] flex-1 bg-slate-100" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Or Login With</span>
-                <div className="h-[1px] flex-1 bg-slate-100" />
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <button 
-                  type="button"
-                  onClick={() => login('admin', 'admin123')}
-                  className="py-3.5 rounded-xl border border-slate-200 flex items-center justify-center gap-3 hover:bg-slate-50 transition-all text-xs font-bold text-slate-600"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="Google" />
-                  <span>Google</span>
-                </button>
-                <button 
-                  type="button"
-                  className="py-3.5 rounded-xl border border-slate-200 flex items-center justify-center gap-3 hover:bg-slate-50 transition-all text-xs font-bold text-slate-600"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C4.45 17.1 3.55 11.5 5.85 8.2c1.13-1.6 2.73-2.58 4.35-2.5 1.28.07 2.1.8 3.1.8 1 0 2.1-.85 3.5-.75 1.6.1 2.8.7 3.6 1.8-3.3 1.9-2.7 6.3.8 7.8-.7 1.8-1.6 3.6-3.1 4.93zM14.15 5.2c-.1 2.1-1.8 3.8-3.8 3.7.1-2.1 1.9-3.9 3.8-3.7z"/>
-                  </svg>
-                  <span>Apple</span>
-                </button>
-              </div>
-            </div>
 
             <div className="text-center">
 
