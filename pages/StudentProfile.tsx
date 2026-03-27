@@ -18,6 +18,7 @@ import {
 import { Student, StudentStatus, Gender, ValidationStatus } from '../types';
 import Autocomplete from '../components/Autocomplete';
 import { motion, AnimatePresence } from 'framer-motion';
+import { generateStudentProfilePDF } from '../utils/pdfExport';
 
 type ProfileTab = 'identity' | 'supervision' | 'thesis';
 
@@ -28,6 +29,7 @@ const StudentProfile: React.FC = () => {
 
   const student = students.find(s => s.id === id);
   const [activeTab, setActiveTab] = useState<ProfileTab>('identity');
+  const [isDownloading, setIsDownloading] = useState(false);
   const [editActiveTab, setEditActiveTab] = useState<ProfileTab>('identity');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [formData, setFormData] = useState<Student | null>(null);
@@ -80,16 +82,33 @@ const StudentProfile: React.FC = () => {
           <span>Back to Registry</span>
         </button>
         
-        {currentRole?.canEdit && (
+        <div className="flex items-center space-x-4">
           <button 
-            onClick={openEditModal}
-            disabled={student.isLocked && currentRole?.role !== 'Admin'}
-            className="flex items-center space-x-3 px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-30 active:scale-95"
+            onClick={async () => {
+              if (student) {
+                setIsDownloading(true);
+                await generateStudentProfilePDF(student);
+                setIsDownloading(false);
+              }
+            }}
+            disabled={isDownloading}
+            className="flex items-center space-x-3 px-8 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-white/5 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm disabled:opacity-50 active:scale-95"
           >
-            <Edit2 size={18} />
-            <span>Modify Record</span>
+            <FileText size={18} className="text-indigo-600" />
+            <span>{isDownloading ? 'Generating...' : 'Download Profile (PDF)'}</span>
           </button>
-        )}
+
+          {currentRole?.canEdit && (
+            <button 
+              onClick={openEditModal}
+              disabled={student.isLocked && currentRole?.role !== 'Admin'}
+              className="flex items-center space-x-3 px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-30 active:scale-95"
+            >
+              <Edit2 size={18} />
+              <span>Modify Record</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {student.isLocked && (
