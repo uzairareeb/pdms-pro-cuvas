@@ -85,7 +85,7 @@ const StudentProfile: React.FC = () => {
         {currentRole?.canEdit && (
           <button 
             onClick={openEditModal}
-            disabled={student.isLocked && currentRole?.roleName !== 'System Administrator'}
+            disabled={student.isLocked && currentRole?.role !== 'Admin'}
             className="flex items-center space-x-3 px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-30 active:scale-95"
           >
             <Edit2 size={18} />
@@ -119,7 +119,7 @@ const StudentProfile: React.FC = () => {
         <StudentTimeline 
           student={student} 
           onUpdate={(updates) => updateStudent({ ...student, ...updates })}
-          isEditable={currentRole?.canEdit && (!student.isLocked || currentRole?.roleName === 'System Administrator')}
+          isEditable={currentRole?.canEdit && (!student.isLocked || currentRole?.role === 'Admin')}
         />
       </div>
 

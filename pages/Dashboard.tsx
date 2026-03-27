@@ -31,7 +31,7 @@ import SearchAutocomplete from '../components/SearchAutocomplete';
 import BrandedLoader from '../components/BrandedLoader';
 
 const Dashboard: React.FC = () => {
-  const { students, settings, isLoading, error, setupDatabase, currentUser } = useStore();
+  const { students, settings, isLoading, error, setupDatabase, currentUser, currentRole } = useStore();
   const navigate = useNavigate();
 
   const QuickProtocol: React.FC<{ icon: any, label: string, path: string }> = ({ icon: Icon, label, path }) => (
@@ -242,10 +242,10 @@ const Dashboard: React.FC = () => {
               Quick Protocols
             </h3>
             <div className="grid grid-cols-1 gap-3">
-              <QuickProtocol icon={Plus} label="Enroll Scholar" path="/registration" />
-              <QuickProtocol icon={Download} label="Data Extraction" path="/export" />
+              {currentRole?.canAdd && <QuickProtocol icon={Plus} label="Enroll Scholar" path="/registration" />}
+              {currentRole?.canExport && <QuickProtocol icon={Download} label="Data Extraction" path="/export" />}
               <QuickProtocol icon={FileBarChart} label="Report Suite" path="/reports" />
-              <QuickProtocol icon={History} label="Audit Logs" path="/audit" />
+              {currentRole?.canViewAudit && <QuickProtocol icon={History} label="Audit Logs" path="/audit" />}
             </div>
           </div>
 

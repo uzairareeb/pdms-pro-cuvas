@@ -59,7 +59,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const mainMenuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'Add Student', icon: UserPlus, path: '/registration' },
+    { name: 'Add Student', icon: UserPlus, path: '/registration', permission: 'canAdd' },
     { name: 'Student List', icon: Users, path: '/records' },
     { name: 'Readmissions', icon: RefreshCw, path: '/readmission-registry' },
     { name: 'Synopsis Tracking', icon: ClipboardList, path: '/synopsis-submission' },
@@ -93,7 +93,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (!currentUser) return <>{children}</>;
 
   const filterItems = (items: any[]) => items.filter(item => {
-    if (item.adminOnly && currentUser.role !== 'System Administrator') return false;
+    if (item.adminOnly && currentUser.role !== 'Admin') return false;
     if (item.permission && currentRole && !(currentRole as any)[item.permission]) return false;
     return true;
   });

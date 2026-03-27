@@ -23,7 +23,7 @@ import Tooltip from '../components/Tooltip';
 import { Link } from 'react-router-dom';
 
 const ReadmissionRegistry: React.FC = () => {
-  const { students, updateStudent, logAction, notify, settings, departments } = useStore();
+  const { students, updateStudent, logAction, notify, settings, departments, currentRole } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDegree, setFilterDegree] = useState<string>('');
   const [filterDept, setFilterDept] = useState<string>('');
@@ -253,7 +253,8 @@ const ReadmissionRegistry: React.FC = () => {
                           </Link>
                           <button 
                             onClick={() => setReadmitId(student.id)}
-                            className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm"
+                            disabled={!currentRole?.canEdit}
+                            className="inline-flex items-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-20"
                           >
                             <RefreshCw size={14} />
                             <span>Readmit</span>
@@ -298,7 +299,8 @@ const ReadmissionRegistry: React.FC = () => {
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={() => setReadmitId(student.id)}
-                  className="w-full py-5 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all hover:bg-emerald-700 shadow-sm"
+                  disabled={!currentRole?.canEdit}
+                  className="w-full py-5 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all hover:bg-emerald-700 shadow-sm disabled:opacity-20"
                 >
                   <RefreshCw size={16} />
                   <span>Execute Readmission</span>

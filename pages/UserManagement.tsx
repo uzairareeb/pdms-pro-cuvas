@@ -35,17 +35,16 @@ const UserManagement: React.FC = () => {
   const [formData, setFormData] = useState({
     username: '',
     name: '',
-    role: 'DAS Officer' as StaffUser['role'],
+    role: 'Viewer' as StaffUser['role'],
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
 
   const stats = {
     total: staff.length,
-    admins: staff.filter(s => s.role === 'System Administrator').length,
-    coordinators: staff.filter(s => s.role === 'DAS Coordinator').length,
-    officers: staff.filter(s => s.role === 'DAS Officer').length,
-    operators: staff.filter(s => s.role === 'Data Entry Operator').length,
+    admins: staff.filter(s => s.role === 'Admin').length,
+    editors: staff.filter(s => s.role === 'Editor').length,
+    viewers: staff.filter(s => s.role === 'Viewer').length,
   };
 
   const filteredStaff = staff.filter(user => 
@@ -110,7 +109,7 @@ const UserManagement: React.FC = () => {
     setIsModalOpen(false);
     setEditingId(null);
     setShowPassword(false);
-    setFormData({ username: '', name: '', role: 'DAS Officer', password: '' });
+    setFormData({ username: '', name: '', role: 'Viewer', password: '' });
   };
 
   return (
@@ -137,7 +136,7 @@ const UserManagement: React.FC = () => {
         <button 
           onClick={() => {
             setEditingId(null);
-            setFormData({ username: '', name: '', role: 'DAS Officer', password: '' });
+            setFormData({ username: '', name: '', role: 'Viewer', password: '' });
             setIsModalOpen(true);
           }}
           className="flex items-center justify-center space-x-3 px-8 md:px-10 py-4 md:py-5 bg-[#0a0c10] dark:bg-indigo-600 text-white rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all active:scale-95 w-full md:w-auto"
@@ -148,12 +147,11 @@ const UserManagement: React.FC = () => {
       </div>
       
       {/* System Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 no-print">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 no-print">
         <StatCard label="Total Personnel" value={stats.total} icon={User} color="indigo" />
-        <StatCard label="Administrators" value={stats.admins} icon={ShieldCheck} color="emerald" />
-        <StatCard label="Coordinators" value={stats.coordinators} icon={ShieldAlert} color="indigo" />
-        <StatCard label="DAS Officers" value={stats.officers} icon={ShieldAlert} color="amber" />
-        <StatCard label="Operators" value={stats.operators} icon={Edit2} color="slate" />
+        <StatCard label="Admins" value={stats.admins} icon={ShieldCheck} color="emerald" />
+        <StatCard label="Editors" value={stats.editors} icon={ShieldAlert} color="indigo" />
+        <StatCard label="Viewers" value={stats.viewers} icon={Eye} color="slate" />
       </div>
 
       {successMessage && (
@@ -215,10 +213,8 @@ const UserManagement: React.FC = () => {
                     </td>
                     <td className="px-10 py-8">
                       <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
-                        user.role === 'System Administrator' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50' :
-                        user.role === 'DAS Coordinator' ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 border-violet-100 dark:border-violet-900/50' :
-                        user.role === 'DAS Officer' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50' :
-                        user.role === 'Data Entry Operator' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50' :
+                        user.role === 'Admin' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50' :
+                        user.role === 'Editor' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50' :
                         'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       }`}>
                         {user.role}
@@ -292,10 +288,8 @@ const UserManagement: React.FC = () => {
                    <div className="flex justify-between items-center border-b border-slate-50 dark:border-slate-800 pb-3">
                       <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Role Tier</span>
                       <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
-                        user.role === 'System Administrator' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50' :
-                        user.role === 'DAS Coordinator' ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 border-violet-100 dark:border-violet-900/50' :
-                        user.role === 'DAS Officer' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50' :
-                        user.role === 'Data Entry Operator' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50' :
+                        user.role === 'Admin' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50' :
+                        user.role === 'Editor' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50' :
                         'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                       }`}>
                         {user.role}
@@ -399,22 +393,18 @@ const UserManagement: React.FC = () => {
                              value={formData.role || ''}
                              onChange={e => setFormData({...formData, role: e.target.value as any})}
                            >
-                             <option value="System Administrator">System Administrator</option>
-                             <option value="DAS Coordinator">DAS Coordinator</option>
-                             <option value="DAS Officer">DAS Officer</option>
-                             <option value="Data Entry Operator">Data Entry Operator</option>
-                             <option value="Auditor">Auditor / Read-Only</option>
+                             <option value="Admin">Admin</option>
+                             <option value="Editor">Editor</option>
+                             <option value="Viewer">Viewer</option>
                            </select>
                            <MoreVertical className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 pointer-events-none" size={16} />
                         </div>
                         <div className="mt-3 px-6 py-4 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100/50 dark:border-indigo-900/30">
                            <p className="text-[10px] text-indigo-700 dark:text-indigo-400 font-bold leading-relaxed">
                               <span className="uppercase tracking-widest mr-2 opacity-60">Privilege Scope:</span>
-                              {formData.role === 'System Administrator' && 'Full system access including user management, settings, and database backups.'}
-                              {formData.role === 'DAS Coordinator' && 'Manage all student records, sessions, and view audit logs. Cannot delete staff.'}
-                              {formData.role === 'DAS Officer' && 'Add and edit student records. Access to basic reporting and exports.'}
-                              {formData.role === 'Data Entry Operator' && 'Primary focus on data input and record updates. Limited system access.'}
-                              {formData.role === 'Auditor' && 'Read-only access to all records and audit logs for monitoring purposes.'}
+                              {formData.role === 'Admin' && 'Full control over the system (create, read, update, delete, and manage all settings).'}
+                              {formData.role === 'Editor' && 'Can view and edit all data, but cannot manage system-level settings or critical controls.'}
+                              {formData.role === 'Viewer' && 'Read-only access; can only view data and system details, with no permission to modify.'}
                            </p>
                         </div>
                     </div>

@@ -26,7 +26,7 @@ import Tooltip from '../components/Tooltip';
 type ViewFilter = 'Pending' | 'Submitted' | 'All';
 
 const SynopsisSubmission: React.FC = () => {
-  const { students, updateStudent, logAction, notify, settings, degrees, departments } = useStore();
+  const { students, updateStudent, logAction, notify, settings, degrees, departments, currentRole } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   
   const [filterDegree, setFilterDegree] = useState<string>('');
@@ -281,7 +281,7 @@ const SynopsisSubmission: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {paginatedStudents.map(student => (
-                  <DesktopRow key={student.id} student={student} pendingChanges={pendingChanges} onStatusChange={handleStatusChange} onDateChange={handleDateChange} onCommit={commitSubmission} />
+                  <DesktopRow key={student.id} student={student} pendingChanges={pendingChanges} onStatusChange={handleStatusChange} onDateChange={handleDateChange} onCommit={commitSubmission} currentRole={currentRole} />
                 ))}
               </tbody>
             </table>
@@ -290,7 +290,7 @@ const SynopsisSubmission: React.FC = () => {
 
         <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-6">
           {paginatedStudents.map(student => (
-            <MobileCard key={student.id} student={student} pendingChanges={pendingChanges} onStatusChange={handleStatusChange} onDateChange={handleDateChange} onCommit={commitSubmission} />
+            <MobileCard key={student.id} student={student} pendingChanges={pendingChanges} onStatusChange={handleStatusChange} onDateChange={handleDateChange} onCommit={commitSubmission} currentRole={currentRole} />
           ))}
         </div>
 
@@ -372,7 +372,7 @@ const SynopsisSubmission: React.FC = () => {
   );
 };
 
-const DesktopRow = ({ student, pendingChanges, onStatusChange, onDateChange, onCommit }: any) => {
+const DesktopRow = ({ student, pendingChanges, onStatusChange, onDateChange, onCommit, currentRole }: any) => {
   const localData = pendingChanges[student.id] || { status: student.synopsis, date: student.synopsisSubmissionDate };
   const isDirty = pendingChanges[student.id] !== undefined;
   const isComplete = localData.status === 'Submitted' || localData.status === 'Approved';
@@ -405,7 +405,8 @@ const DesktopRow = ({ student, pendingChanges, onStatusChange, onDateChange, onC
       <td className="px-10 py-10">
          <div className="relative w-44">
             <select 
-              className={`w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest appearance-none outline-none border transition-all cursor-pointer ${isComplete ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}
+              disabled={!currentRole?.canEdit}
+              className={`w-full px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest appearance-none outline-none border transition-all cursor-pointer ${isComplete ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'} ${!currentRole?.canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
               value={localData.status}
               onChange={(e) => onStatusChange(student.id, e.target.value)}
             >
@@ -419,7 +420,7 @@ const DesktopRow = ({ student, pendingChanges, onStatusChange, onDateChange, onC
       <td className="px-10 py-10">
          <input 
             type="date"
-            disabled={localData.status === 'Not Submitted'}
+            disabled={localData.status === 'Not Submitted' || !currentRole?.canEdit}
             className="px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-600 disabled:opacity-30 transition-all"
             value={localData.date || ''}
             onChange={(e) => onDateChange(student.id, e.target.value)}
@@ -428,8 +429,8 @@ const DesktopRow = ({ student, pendingChanges, onStatusChange, onDateChange, onC
       <td className="px-10 py-10 text-right">
          <button 
            onClick={() => onCommit(student)}
-           disabled={!isDirty}
-           className={`p-4 rounded-xl transition-all shadow-sm ${isDirty ? 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95' : 'bg-slate-50 text-slate-200'}`}
+           disabled={!isDirty || !currentRole?.canEdit}
+           className={`p-4 rounded-xl transition-all shadow-sm ${isDirty && currentRole?.canEdit ? 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95' : 'bg-slate-50 text-slate-200 cursor-not-allowed'}`}
          >
            <Save size={20} />
          </button>
@@ -438,7 +439,7 @@ const DesktopRow = ({ student, pendingChanges, onStatusChange, onDateChange, onC
   );
 };
 
-const MobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onCommit }: any) => {
+const MobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onCommit, currentRole }: any) => {
   const localData = pendingChanges[student.id] || { status: student.synopsis, date: student.synopsisSubmissionDate };
   const isDirty = pendingChanges[student.id] !== undefined;
   const isComplete = localData.status === 'Submitted' || localData.status === 'Approved';
@@ -463,7 +464,8 @@ const MobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onC
         <div className="relative">
           <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block ml-2">Milestone Status</label>
           <select 
-            className={`w-full px-5 py-4 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${isComplete ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}
+            disabled={!currentRole?.canEdit}
+            className={`w-full px-5 py-4 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${isComplete ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'} ${!currentRole?.canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
             value={localData.status || ''}
             onChange={(e) => onStatusChange(student.id, e.target.value)}
           >
@@ -477,7 +479,7 @@ const MobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onC
           <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block ml-2">Submission Date</label>
           <input 
             type="date"
-            disabled={localData.status === 'Not Submitted'}
+            disabled={localData.status === 'Not Submitted' || !currentRole?.canEdit}
             className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-700 disabled:opacity-30"
             value={localData.date || ''}
             onChange={(e) => onDateChange(student.id, e.target.value)}
@@ -487,8 +489,8 @@ const MobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onC
 
       <button 
         onClick={() => onCommit(student)}
-        disabled={!isDirty}
-        className={`w-full py-5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all ${isDirty ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-300'}`}
+        disabled={!isDirty || !currentRole?.canEdit}
+        className={`w-full py-5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all ${isDirty && currentRole?.canEdit ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-300 cursor-not-allowed'}`}
       >
         <Save size={16} />
         <span>Commit Updates</span>

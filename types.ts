@@ -58,18 +58,20 @@ export interface Student {
   isLocked: boolean;
 }
 
+export type UserRole = 'Admin' | 'Editor' | 'Viewer';
+
 export interface StaffUser {
   id: string;
   username: string;
   password?: string;
   name: string;
-  role: 'System Administrator' | 'DAS Coordinator' | 'DAS Officer' | 'Data Entry Operator' | 'Auditor' | 'Read-Only User';
+  role: UserRole;
   lastLogin?: string;
 }
 
 export interface RolePermissions {
   id: string;
-  roleName: string;
+  role: UserRole;
   canAdd: boolean;
   canEdit: boolean;
   canDelete: boolean;

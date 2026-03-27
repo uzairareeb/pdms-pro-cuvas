@@ -49,9 +49,13 @@ const NotificationHost = () => {
   );
 };
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser } = useStore();
+const ProtectedRoute: React.FC<{ children: React.ReactNode; permission?: keyof any; adminOnly?: boolean }> = ({ children, permission, adminOnly }) => {
+  const { currentUser, currentRole } = useStore();
   if (!currentUser) return <Navigate to="/login" replace />;
+  
+  if (adminOnly && currentUser.role !== 'Admin') return <Navigate to="/" replace />;
+  if (permission && currentRole && !(currentRole as any)[permission]) return <Navigate to="/" replace />;
+  
   return <Layout>{children}</Layout>;
 };
 
@@ -63,19 +67,19 @@ const AppRoutes = () => {
       <Routes location={location} key={location.pathname}>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/registration" element={<ProtectedRoute><StudentRegistration /></ProtectedRoute>} />
+        <Route path="/registration" element={<ProtectedRoute permission="canAdd"><StudentRegistration /></ProtectedRoute>} />
         <Route path="/records" element={<ProtectedRoute><StudentRecords /></ProtectedRoute>} />
         <Route path="/synopsis-submission" element={<ProtectedRoute><SynopsisSubmission /></ProtectedRoute>} />
         <Route path="/thesis-tracking" element={<ProtectedRoute><ThesisTracking /></ProtectedRoute>} />
         <Route path="/readmission-registry" element={<ProtectedRoute><ReadmissionRegistry /></ProtectedRoute>} />
         <Route path="/students/:id" element={<ProtectedRoute><StudentProfile /></ProtectedRoute>} />
-        <Route path="/upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />
-        <Route path="/export" element={<ProtectedRoute><DataExport /></ProtectedRoute>} />
-        <Route path="/audit" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
+        <Route path="/upload" element={<ProtectedRoute permission="canBulkUpload"><BulkUpload /></ProtectedRoute>} />
+        <Route path="/export" element={<ProtectedRoute permission="canExport"><DataExport /></ProtectedRoute>} />
+        <Route path="/audit" element={<ProtectedRoute permission="canViewAudit"><AuditTrail /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><SystemReports /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-        <Route path="/settings/database" element={<ProtectedRoute><DatabaseSettings /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute adminOnly><UserManagement /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
+        <Route path="/settings/database" element={<ProtectedRoute adminOnly><DatabaseSettings /></ProtectedRoute>} />
         <Route path="/mobile-app" element={<ProtectedRoute><MobileApp /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

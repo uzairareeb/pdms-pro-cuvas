@@ -254,7 +254,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: 'admin',
         username: 'admin',
         name: 'System Administrator',
-        role: 'System Administrator'
+        role: 'Admin'
       };
       setCurrentUser(adminUser);
       localStorage.setItem('das_user_obj', JSON.stringify(adminUser));
@@ -664,14 +664,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notify,
       currentRole: currentUser ? { 
         id: 'r1', 
-        roleName: currentUser.role, 
-        canAdd: currentUser.role !== 'Read-Only User', 
-        canEdit: currentUser.role !== 'Read-Only User' && currentUser.role !== 'Auditor', 
-        canDelete: currentUser.role === 'System Administrator', 
-        canBulkUpload: currentUser.role === 'System Administrator' || currentUser.role === 'DAS Coordinator', 
-        canExport: true, 
-        canViewAudit: currentUser.role === 'System Administrator' || currentUser.role === 'Auditor', 
-        canLockRecords: currentUser.role === 'System Administrator' 
+        role: currentUser.role, 
+        canAdd: currentUser.role === 'Admin' || currentUser.role === 'Editor', 
+        canEdit: currentUser.role === 'Admin' || currentUser.role === 'Editor', 
+        canDelete: currentUser.role === 'Admin', 
+        canBulkUpload: currentUser.role === 'Admin' || currentUser.role === 'Editor', 
+        canExport: currentUser.role !== 'Viewer', 
+        canViewAudit: currentUser.role === 'Admin' || currentUser.role === 'Editor', 
+        canLockRecords: currentUser.role === 'Admin' 
       } : null,
       login,
       logout,
