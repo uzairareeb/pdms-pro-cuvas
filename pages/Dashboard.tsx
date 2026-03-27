@@ -23,34 +23,54 @@ import {
 } from '../utils/dashboardMetrics';
 
 // ─── KPI Card ────────────────────────────────────────────────────────────────
-interface KpiCardProps { label: string; value: number; color: string; bgColor: string; icon: any; delta?: string; }
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, color, bgColor, icon: Icon, delta }) => (
+interface KpiCardProps {
+  label: string;
+  value: number;
+  gradient: string;      // CSS gradient string
+  icon: any;
+  badge?: string;        // small top-right label
+  sub?: string;          // optional subtitle below value
+}
+const KpiCard: React.FC<KpiCardProps> = ({ label, value, gradient, icon: Icon, badge, sub }) => (
   <motion.div
-    initial={{ opacity: 0, y: 16 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="p-6 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+    initial={{ opacity: 0, y: 20, scale: 0.97 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    whileHover={{ y: -3, scale: 1.02 }}
+    transition={{ duration: 0.35, ease: 'easeOut' }}
+    className="relative overflow-hidden rounded-2xl p-6 shadow-md hover:shadow-xl transition-shadow cursor-default"
+    style={{ background: gradient }}
   >
-    <div
-      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-      style={{ background: `linear-gradient(135deg, ${bgColor}08 0%, transparent 60%)` }}
-    />
-    <div className="flex items-center justify-between mb-4 relative z-10">
-      <div className="p-2.5 rounded-xl" style={{ backgroundColor: `${bgColor}15` }}>
-        <Icon size={18} style={{ color }} />
+    {/* Watermark icon */}
+    <div className="absolute -bottom-3 -right-3 opacity-[0.12] pointer-events-none">
+      <Icon size={90} className="text-white" />
+    </div>
+
+    {/* Top row: icon + badge */}
+    <div className="flex items-start justify-between mb-5 relative z-10">
+      <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
+        <Icon size={20} className="text-white" />
       </div>
-      {delta && (
-        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
-          style={{ backgroundColor: `${bgColor}12`, color }}>
-          {delta}
+      {badge && (
+        <span className="text-[8px] font-black uppercase tracking-[0.15em] bg-white/20 text-white px-2.5 py-1 rounded-full backdrop-blur-sm">
+          {badge}
         </span>
       )}
     </div>
+
+    {/* Value + Label */}
     <div className="relative z-10">
-      <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{label}</p>
-      <h4 className="text-3xl font-black tracking-tighter tabular-nums" style={{ color }}>{value}</h4>
+      <h4 className="text-[2.6rem] font-black text-white tracking-tighter tabular-nums leading-none mb-1.5">
+        {value.toLocaleString()}
+      </h4>
+      <p className="text-[10px] font-black text-white/80 uppercase tracking-[0.22em] leading-tight">{label}</p>
+      {sub && <p className="text-[9px] text-white/55 mt-1 font-bold">{sub}</p>}
     </div>
+
+    {/* Bottom shine line */}
+    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10 rounded-full" />
   </motion.div>
 );
+
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 const SectionHeader: React.FC<{ icon: any; title: string; subtitle: string }> = ({ icon: Icon, title, subtitle }) => (
@@ -202,19 +222,76 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* ── KPI Row ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Scholars"  value={m.totalCount}     color="#4338ca" bgColor="#4338ca" icon={Layers}        delta="All records" />
-        <KpiCard label="Active Students" value={m.activeCount}    color="#16a34a" bgColor="#16a34a" icon={Zap}           delta="In programme" />
-        <KpiCard label="Graduates"       value={m.completedCount} color="#059669" bgColor="#059669" icon={GraduationCap} delta="Completed" />
-        <KpiCard label="Pending Audit"   value={m.pendingAuditCount} color="#dc2626" bgColor="#dc2626" icon={AlertCircle} delta="Need review" />
+      {/* ── KPI Row 1: Primary Metrics ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <KpiCard
+          label="All Records"
+          value={m.totalCount}
+          gradient="linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)"
+          icon={Layers}
+          badge="Total"
+          sub={`${m.maleCount} M · ${m.femaleCount} F`}
+        />
+        <KpiCard
+          label="Active Students"
+          value={m.activeCount}
+          gradient="linear-gradient(135deg, #059669 0%, #16a34a 100%)"
+          icon={Zap}
+          badge="In Programme"
+          sub={`${m.totalCount > 0 ? Math.round((m.activeCount / m.totalCount) * 100) : 0}% of total`}
+        />
+        <KpiCard
+          label="Graduates"
+          value={m.completedCount}
+          gradient="linear-gradient(135deg, #0d9488 0%, #0891b2 100%)"
+          icon={GraduationCap}
+          badge="Completed"
+          sub={`${m.totalCount > 0 ? Math.round((m.completedCount / m.totalCount) * 100) : 0}% of total`}
+        />
+        <KpiCard
+          label="Pending Audit"
+          value={m.pendingAuditCount}
+          gradient="linear-gradient(135deg, #dc2626 0%, #e11d48 100%)"
+          icon={AlertCircle}
+          badge="Need Review"
+          sub="Validation queue"
+        />
       </div>
 
+      {/* ── KPI Row 2: Demographics & Status ── */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="Male"      value={m.maleCount}    color="#0284c7" bgColor="#0284c7" icon={Users} />
-        <KpiCard label="Female"    value={m.femaleCount}  color="#db2777" bgColor="#db2777" icon={Users} />
-        <KpiCard label="Dropped"   value={m.droppedCount + m.closedCount} color="#ea580c" bgColor="#ea580c" icon={UserX} />
-        <KpiCard label="On Leave / Suspended" value={m.onLeaveCount + m.suspendedCount} color="#7c3aed" bgColor="#7c3aed" icon={PauseCircle} />
+        <KpiCard
+          label="Male Scholars"
+          value={m.maleCount}
+          gradient="linear-gradient(135deg, #0369a1 0%, #0284c7 100%)"
+          icon={Users}
+          badge="Male"
+          sub={`${m.totalCount > 0 ? Math.round((m.maleCount / m.totalCount) * 100) : 0}% of scholars`}
+        />
+        <KpiCard
+          label="Female Scholars"
+          value={m.femaleCount}
+          gradient="linear-gradient(135deg, #be185d 0%, #db2777 100%)"
+          icon={Users}
+          badge="Female"
+          sub={`${m.totalCount > 0 ? Math.round((m.femaleCount / m.totalCount) * 100) : 0}% of scholars`}
+        />
+        <KpiCard
+          label="Dropped / Closed"
+          value={m.droppedCount + m.closedCount}
+          gradient="linear-gradient(135deg, #b45309 0%, #ea580c 100%)"
+          icon={UserX}
+          badge="Withdrawn"
+          sub={`${m.droppedCount} dropped · ${m.closedCount} closed`}
+        />
+        <KpiCard
+          label="On Leave / Suspended"
+          value={m.onLeaveCount + m.suspendedCount}
+          gradient="linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%)"
+          icon={PauseCircle}
+          badge="Frozen"
+          sub={`${m.onLeaveCount} leave · ${m.suspendedCount} susp.`}
+        />
       </div>
 
       {/* ── Main Grid ── */}
