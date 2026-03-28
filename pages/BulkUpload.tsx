@@ -18,14 +18,20 @@ import {
   ScanLine,
   FileUp,
   AlertTriangle,
-  X
+  X,
+  FileSpreadsheet,
+  Settings2,
+  CheckCircle,
+  Clock,
+  ChevronRight,
+  ClipboardList
 } from 'lucide-react';
 import { Student } from '../types';
 import Tooltip from '../components/Tooltip';
 import BrandedLoader from '../components/BrandedLoader';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Smart Schema Configuration ---
-// This defines the Exact Source of Truth for both Template Generation and Parsing
 const SCHEMA_CONFIG = [
   { key: 'cnic', label: 'CNIC Number', aliases: ['cnic', 'cnicno', 'nic', 'identity'] },
   { key: 'name', label: 'Scholar Name', aliases: ['name', 'studentname', 'fullname', 'scholar'] },
@@ -62,47 +68,38 @@ const SCHEMA_CONFIG = [
 const normalizeValue = (key: string, rawValue: string): string => {
   const value = (rawValue || '').trim();
   if (!value) return '';
-
   const lower = value.toLowerCase();
-
-  // Accept legacy "Yes/No" style values from existing CSVs.
   if (key === 'gs2CourseWork') {
     if (['yes', 'y', 'completed', 'done', 'true', '1'].includes(lower)) return 'Completed';
     if (['no', 'n', 'not completed', 'pending', 'false', '0'].includes(lower)) return 'Not Completed';
     return value;
   }
-
   if (['synopsis', 'gs4Form', 'semiFinalThesisStatus', 'finalThesisStatus'].includes(key)) {
     if (['yes', 'y', 'submitted', 'true', '1'].includes(lower)) return 'Submitted';
     if (['no', 'n', 'not submitted', 'pending', 'false', '0'].includes(lower)) return 'Not Submitted';
     if (lower === 'approved') return 'Approved';
     return value;
   }
-
   if (key === 'thesisSentToCOE') {
     if (['yes', 'y', 'true', '1'].includes(lower)) return 'Yes';
     if (['no', 'n', 'false', '0'].includes(lower)) return 'No';
     return value;
   }
-
   if (key === 'validationStatus') {
     if (lower === 'approved') return 'Approved';
     if (['returned', 'rejected'].includes(lower)) return 'Returned';
     if (['pending', 'not submitted', 'submitted', 'in progress'].includes(lower)) return 'Pending';
     return value;
   }
-
   if (key === 'gender') {
     if (['f', 'female'].includes(lower)) return 'Female';
     if (['m', 'male'].includes(lower)) return 'Male';
     return value;
   }
-
   return value;
 };
 
 const applyRequiredDefaults = (entry: any) => {
-  // Ensure required enum/check-constrained fields are always valid.
   if (!entry.gender) entry.gender = 'Male';
   if (!entry.status) entry.status = 'Active';
   if (!entry.synopsis) entry.synopsis = 'Not Submitted';
@@ -115,6 +112,17 @@ const applyRequiredDefaults = (entry: any) => {
   if (!entry.currentSemester || Number.isNaN(Number(entry.currentSemester))) entry.currentSemester = 1;
 };
 
+// ─── KPI Card Component ───────────────────────────────────────────────────────
+const KpiCard = ({ label, value, gradient, icon: Icon }: any) => (
+  <div className="relative overflow-hidden rounded-2xl p-6 shadow-sm flex flex-col justify-between h-32" style={{ background: gradient }}>
+    <div className="absolute -bottom-2 -right-2 opacity-15 pointer-events-none">
+      <Icon size={80} className="text-white" />
+    </div>
+    <p className="text-[9px] font-black text-white/80 uppercase tracking-[0.2em]">{label}</p>
+    <h4 className="text-4xl font-black text-white tracking-tighter tabular-nums leading-none mb-1">{value}</h4>
+  </div>
+);
+
 const BulkUpload: React.FC = () => {
   const { bulkAddStudents, students, notify, settings } = useStore();
   const [status, setStatus] = useState<'idle' | 'parsing' | 'preview' | 'processing' | 'error'>('idle');
@@ -122,7 +130,6 @@ const BulkUpload: React.FC = () => {
   const [report, setReport] = useState({ total: 0, mappedColumns: 0, missingCritical: false, duplicates: 0 });
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
-  // 1. Generate Template based on Schema
   const downloadTemplate = () => {
     const headers = SCHEMA_CONFIG.map(col => col.label);
     const sampleData = [
@@ -131,45 +138,31 @@ const BulkUpload: React.FC = () => {
       'Dr. Supervisor Name', '', '', '', 'RES-001', 'Not Submitted', '', 'Completed', 'Not Submitted',
       'Not Submitted', '', 'Not Submitted', '', 'No', '', 'Pending', '', 'Sample entry.'
     ];
-
-    const csv = Papa.unparse({
-      fields: headers,
-      data: [sampleData]
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    const csv = Papa.unparse({ fields: headers, data: [sampleData] });
     const link = document.createElement('a');
-    link.href = url;
+    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     link.download = 'PDMS_PRO_Smart_Template.csv';
     link.click();
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    if (file && file.name.endsWith('.csv')) {
+    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx'))) {
       processFile(file);
     } else {
-      notify('Invalid file format. Please upload a CSV file.', 'error');
+      notify('Unsupported format. Please upload a CSV file.', 'error');
     }
   }, [notify]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'text/csv': ['.csv']
-    },
-    multiple: false
+    onDrop, accept: { 'text/csv': ['.csv'] }, multiple: false
   });
 
-  // 2. Intelligent Parser using PapaParse
   const processFile = (fileToParse: File) => {
     setStatus('parsing');
     const tryParse = (delimiter?: string) => new Promise<{ data: any[]; meta: any }>((resolve, reject) => {
       Papa.parse(fileToParse, {
-        header: true,
-        skipEmptyLines: true,
-        ...(delimiter ? { delimiter } : {}),
+        header: true, skipEmptyLines: true, ...(delimiter ? { delimiter } : {}),
         complete: (results) => resolve({ data: Array.isArray(results.data) ? results.data : [], meta: results.meta }),
         error: reject
       });
@@ -178,428 +171,319 @@ const BulkUpload: React.FC = () => {
     const processParsed = (data: any[], meta: any) => {
       let rawHeaders = meta?.fields || [];
       let rows: any[] = Array.isArray(data) ? data : [];
-
       if (rows.length === 0) return { mappedCount: 0, integratedData: [], criticalMissing: false, duplicateCount: 0 };
-
-      // Fallback for tab-delimited files parsed as a single column.
       if (rawHeaders.length === 1 && rawHeaders[0]?.includes('\t')) {
-        const compositeHeader = rawHeaders[0];
-        const tabHeaders = compositeHeader.split('\t').map(h => h.trim());
-        const reconstructedRows: any[] = [];
-
-        rows.forEach((row: any) => {
-          const rawLine = row?.[compositeHeader];
+        const tabHeaders = rawHeaders[0].split('\t').map(h => h.trim());
+        const reconstructed: any[] = [];
+        rows.forEach(row => {
+          const rawLine = row?.[rawHeaders[0]];
           if (!rawLine || typeof rawLine !== 'string') return;
           const tabValues = rawLine.split('\t');
-          const rebuilt: Record<string, string> = {};
-          tabHeaders.forEach((h, idx) => {
-            rebuilt[h] = (tabValues[idx] ?? '').toString().trim();
-          });
-          reconstructedRows.push(rebuilt);
+          const rebuilt: any = {};
+          tabHeaders.forEach((h, idx) => rebuilt[h] = (tabValues[idx] ?? '').toString().trim());
+          reconstructed.push(rebuilt);
         });
-
-        rawHeaders = tabHeaders;
-        rows = reconstructedRows;
+        rawHeaders = tabHeaders; rows = reconstructed;
       }
-
-      const columnMapping: Record<string, string> = {};
+      const mapping: Record<string, string> = {};
       let mappedCount = 0;
-
-      rawHeaders.forEach((headerText) => {
-        const normalizedHeader = headerText.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const match = SCHEMA_CONFIG.find(field =>
-          field.key.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedHeader ||
-          field.aliases.includes(normalizedHeader) ||
-          field.label.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedHeader
-        );
-
-        if (match) {
-          columnMapping[headerText] = match.key;
-          mappedCount++;
-        }
+      rawHeaders.forEach(header => {
+        const norm = header.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const match = SCHEMA_CONFIG.find(f => f.key.toLowerCase().replace(/[^a-z0-9]/g, '') === norm || f.aliases.includes(norm) || f.label.toLowerCase().replace(/[^a-z0-9]/g, '') === norm);
+        if (match) { mapping[header] = match.key; mappedCount++; }
       });
-
       const integratedData: any[] = [];
       let criticalMissing = false;
       let duplicateCount = 0;
-
-      rows.forEach((row: any) => {
+      rows.forEach(row => {
         const entry: any = { isLocked: false };
         let hasData = false;
-
-        Object.keys(columnMapping).forEach(header => {
-          const systemKey = columnMapping[header];
-          const cellValue = row[header]?.toString().trim() || '';
-
-          if (cellValue) hasData = true;
-
-          if (systemKey === 'currentSemester') {
-            entry[systemKey] = parseInt(cellValue) || 1;
-          } else {
-            entry[systemKey] = normalizeValue(systemKey, cellValue);
-          }
+        Object.keys(mapping).forEach(header => {
+          const key = mapping[header];
+          const val = row[header]?.toString().trim() || '';
+          if (val) hasData = true;
+          entry[key] = (key === 'currentSemester' ? parseInt(val) || 1 : normalizeValue(key, val));
         });
-
-        if (!hasData) return;
-        if (!entry.name && !entry.cnic && !entry.regNo) return;
+        if (!hasData || (!entry.name && !entry.cnic && !entry.regNo)) return;
         if (!entry.name || !entry.regNo) criticalMissing = true;
-
         applyRequiredDefaults(entry);
-
-        const isDuplicate = students.some(s =>
-          (entry.cnic && s.cnic === entry.cnic) ||
-          (entry.regNo && s.regNo === entry.regNo)
-        );
-
-        if (isDuplicate) {
-          entry.isDuplicate = true;
-          duplicateCount++;
-        }
-
+        const isDuplicate = students.some(s => (entry.cnic && s.cnic === entry.cnic) || (entry.regNo && s.regNo === entry.regNo));
+        if (isDuplicate) { entry.isDuplicate = true; duplicateCount++; }
         integratedData.push(entry);
       });
-
       return { mappedCount, integratedData, criticalMissing, duplicateCount };
     };
 
     (async () => {
       try {
-        const attempts = [
-          await tryParse(),        // auto / default
-          await tryParse(','),     // explicit CSV
-          await tryParse('\t'),    // TSV
-          await tryParse(';')      // regional semicolon CSV
-        ];
-
+        const attempts = [await tryParse(), await tryParse(','), await tryParse('\t'), await tryParse(';')];
         let best = { mappedCount: 0, integratedData: [], criticalMissing: false, duplicateCount: 0 };
-        attempts.forEach((attempt) => {
-          const processed = processParsed(attempt.data, attempt.meta);
-          if (processed.mappedCount > best.mappedCount || processed.integratedData.length > best.integratedData.length) {
-            best = processed;
-          }
+        attempts.forEach(a => {
+          const p = processParsed(a.data, a.meta);
+          if (p.mappedCount > best.mappedCount || p.integratedData.length > best.integratedData.length) best = p;
         });
-
         if (best.integratedData.length === 0) {
-          notify('Could not map rows from this file. Please export as CSV (UTF-8) from Excel and try again.', 'error');
-          setStatus('error');
-          return;
+          notify('Could not map rows. Use the official template.', 'error');
+          setStatus('error'); return;
         }
-
         setParsedData(best.integratedData);
-        setReport({
-          total: best.integratedData.length,
-          mappedColumns: best.mappedCount,
-          missingCritical: best.criticalMissing,
-          duplicates: best.duplicateCount
-        });
+        setReport({ total: best.integratedData.length, mappedColumns: best.mappedCount, missingCritical: best.criticalMissing, duplicates: best.duplicateCount });
         setStatus('preview');
-        notify(`Smart Detection: ${best.mappedCount} columns mapped automatically.`, 'success');
-      } catch (error) {
-        console.error('CSV Parsing Error:', error);
-        notify('Failed to parse CSV file.', 'error');
-        setStatus('error');
-      }
+        notify(`Detection Complete: ${best.mappedCount} columns auto-mapped.`, 'success');
+      } catch (e) { setStatus('error'); notify('Failed to parse CSV.', 'error'); }
     })();
   };
 
   const executeSync = async () => {
-    if (report.duplicates > 0 && !showDuplicateModal) {
-      setShowDuplicateModal(true);
-      return;
-    }
-
-    setStatus('processing');
-    setShowDuplicateModal(false);
-    
+    if (report.duplicates > 0 && !showDuplicateModal) { setShowDuplicateModal(true); return; }
+    setStatus('processing'); setShowDuplicateModal(false);
     try {
       const inserted = await bulkAddStudents(parsedData);
-      setStatus('idle');
-      setParsedData([]);
-      notify(`Registry synchronization complete. ${inserted} records uploaded.`, 'success');
-    } catch (error) {
-      setStatus('error');
-      const message = error instanceof Error ? error.message : 'Failed to sync with database.';
-      notify(message, 'error');
-    }
+      setStatus('idle'); setParsedData([]);
+      notify(`Sync success: ${inserted} records uploaded.`, 'success');
+    } catch (e) { setStatus('error'); notify('Sync failed.', 'error'); }
   };
 
-  const reset = () => {
-    setParsedData([]);
-    setStatus('idle');
-  };
+  const reset = () => { setParsedData([]); setStatus('idle'); };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in duration-700 pb-20 px-4">
-      {/* Duplicate Warning Modal */}
-      {showDuplicateModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowDuplicateModal(false)} />
-          <div className="relative w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="absolute top-0 inset-x-0 h-2 bg-amber-500" />
-            <div className="p-8 md:p-12">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-                    <AlertTriangle size={28} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Duplicate Records Found</h3>
-                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1">Bulk Import Conflict</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowDuplicateModal(false)} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="space-y-4 mb-10">
-                <p className="text-sm text-slate-600 font-medium leading-relaxed">
-                  The smart engine has detected <span className="font-black text-amber-600">{report.duplicates}</span> records that already exist in the master registry based on CNIC or Registration Number.
-                </p>
-                <p className="text-xs text-slate-400 font-medium italic">
-                  Proceeding will create duplicate entries. We recommend reviewing the highlighted rows in the preview table.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <button 
-                  onClick={() => setShowDuplicateModal(false)}
-                  className="w-full sm:flex-1 py-5 bg-slate-100 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
-                >
-                  Cancel & Review
-                </button>
-                <button 
-                  onClick={() => {
-                    setStatus('processing');
-                    setShowDuplicateModal(false);
-                    executeSync();
-                  }}
-                  className="w-full sm:flex-1 py-5 bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition-all shadow-sm"
-                >
-                  Ignore & Sync All
-                </button>
-              </div>
-            </div>
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="space-y-8 pb-20 px-4 max-w-7xl mx-auto">
+      {/* --- Duplicate Warning Modal --- */}
+      <AnimatePresence>
+        {showDuplicateModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowDuplicateModal(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden">
+               <div className="bg-amber-600 px-8 py-6 flex items-center gap-4 text-white">
+                 <AlertTriangle size={32} />
+                 <div>
+                    <h3 className="text-xl font-black uppercase tracking-tight">Records Conflict Found</h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">Duplicate CNIC or Registration Numbers Detected</p>
+                 </div>
+               </div>
+               <div className="p-8 space-y-6">
+                 <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                   Smart Engine found <span className="font-black text-amber-600 underline underline-offset-4">{report.duplicates}</span> students already present in your master registry. Duplicate records will not be skipped but cloned — we recommend reviewing highlighting. 
+                 </p>
+                 <div className="flex gap-4">
+                   <button onClick={() => setShowDuplicateModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel & Review</button>
+                   <button onClick={() => { executeSync(); }} className="flex-1 py-4 bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition-all shadow-md">Ignore & Sync All</button>
+                 </div>
+               </div>
+            </motion.div>
           </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-3">
-          <div className="flex items-center space-x-4">
-             <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center overflow-hidden p-1 shadow-sm border border-slate-100">
-                <img 
-                  src={settings.institution.logo || null} 
-                  className="w-full h-full object-contain" 
-                  alt="Logo" 
-                  referrerPolicy="no-referrer"
-                />
-             </div>
-             <div>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Smart Import</h1>
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-1">AI-Assisted CSV Column Mapping</p>
-             </div>
-          </div>
-        </div>
-        
-        {status === 'idle' && (
-          <button 
-            onClick={downloadTemplate}
-            className="flex items-center space-x-3 px-8 py-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm group"
-          >
-            <Download size={16} className="group-hover:translate-y-1 transition-transform" />
-            <span>Download Smart Template</span>
-          </button>
         )}
+      </AnimatePresence>
+
+      {/* --- Page Header --- */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex items-center gap-5">
+          <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center shadow-sm overflow-hidden p-1 shrink-0">
+            <img src={settings.institution.logo || ''} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">Smart Bulk Upload</h1>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">Intelligent Registry synchronization Engine · {settings.institution.name || 'CUVAS'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+           <button onClick={downloadTemplate} className="flex items-center gap-2.5 px-6 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+              <Download size={16} /> <span>Get Template</span>
+           </button>
+        </div>
       </div>
 
       {status === 'idle' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in slide-in-from-bottom-4 duration-500">
+          {/* Instructions Cards */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white p-10 rounded-xl border border-slate-100 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-1.5 bg-indigo-600" />
-              <div className="p-4 bg-indigo-50 text-indigo-600 rounded-xl w-fit mb-8 shadow-inner">
-                 <ScanLine size={24} />
-              </div>
-              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Auto-Detect Protocol</h3>
-              <div className="mt-8 space-y-6">
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-indigo-600 shrink-0">01</div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-900 uppercase tracking-wider">Pattern Recognition</p>
-                    <p className="text-[10px] text-slate-500 font-medium">System recognizes headers regardless of casing (e.g., "reg no", "Reg #", "Enrollment").</p>
+            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+               <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600" />
+               <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6">
+                  <ScanLine size={24} />
+               </div>
+               <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Auto-Map Protocol</h3>
+               <p className="text-[11px] text-slate-500 font-bold leading-relaxed mt-4 uppercase tracking-wider">
+                 Our system uses Smart Alias detection. Headers like "Reg No", "Registration #", or "Roll ID" are automatically paired with our master registry.
+               </p>
+               <div className="mt-8 space-y-4 pt-6 border-t border-slate-50">
+                  <div className="flex items-center gap-3 text-emerald-600">
+                    <CheckCircle size={16} /> <span className="text-[9px] font-black uppercase tracking-widest">Type-Safe Transformation</span>
                   </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-indigo-600 shrink-0">02</div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-900 uppercase tracking-wider">Type Safety</p>
-                    <p className="text-[10px] text-slate-500 font-medium">Dates and Semesters are automatically formatted to system standards.</p>
+                  <div className="flex items-center gap-3 text-emerald-600">
+                    <CheckCircle size={16} /> <span className="text-[9px] font-black uppercase tracking-widest">Duplicate Leak Prevention</span>
                   </div>
-                </div>
-              </div>
+               </div>
             </div>
 
-            <div className="bg-[#0f172a] p-10 rounded-xl text-white shadow-sm relative overflow-hidden group">
-               <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12 group-hover:rotate-0 transition-transform duration-1000"><ShieldCheck size={140} /></div>
-               <p className="text-indigo-400 text-[9px] font-black uppercase tracking-[0.4em] mb-4">Integrity Validation</p>
-               <p className="text-slate-400 text-xs font-bold leading-relaxed uppercase tracking-widest">
-                 Use the "Download Smart Template" button to ensure 100% column matching accuracy.
+            <div className="bg-[#0f172a] p-8 rounded-3xl text-white shadow-xl relative overflow-hidden group">
+               <div className="absolute right-[-10%] bottom-[-10%] opacity-10 rotate-12 group-hover:rotate-0 transition-transform duration-1000">
+                 <ShieldCheck size={160} />
+               </div>
+               <p className="text-indigo-400 text-[8px] font-black uppercase tracking-[0.4em] mb-4">Quality Guard</p>
+               <h4 className="text-sm font-black uppercase tracking-tight leading-relaxed">
+                 Always verify "CNIC" and "Reg No" are present for 100% record precision.
+               </h4>
+               <p className="mt-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                 System ignores empty rows automatically.
                </p>
             </div>
           </div>
 
+          {/* Upload Dropzone */}
           <div className="lg:col-span-8">
-            <div 
-              {...getRootProps()}
-              className={`w-full h-[500px] border-4 border-dashed rounded-xl transition-all flex flex-col items-center justify-center cursor-pointer group ${
-                isDragActive 
-                ? 'bg-indigo-100 border-indigo-400 scale-[0.99]' 
-                : 'bg-white border-slate-100 hover:bg-indigo-50/20 hover:border-indigo-200'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <div className={`p-12 rounded-xl shadow-inner transition-all duration-500 ${
-                isDragActive ? 'bg-indigo-600 text-white scale-110' : 'bg-indigo-50 text-indigo-600 group-hover:scale-105'
-              }`}>
-                {isDragActive ? <FileUp size={64} /> : <CloudUpload size={64} />}
-              </div>
-              <div className="mt-10 text-center space-y-2">
-                <p className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-                  {isDragActive ? 'Release to Upload' : 'Drop CSV Template Here'}
-                </p>
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">
-                  {isDragActive ? 'Smart Engine Ready' : 'Engine will auto-map columns upon upload'}
-                </p>
-              </div>
-            </div>
+             <div 
+               {...getRootProps()}
+               className={`w-full min-h-[450px] border-4 border-dashed rounded-3xl transition-all flex flex-col items-center justify-center cursor-pointer group p-10 ${
+                 isDragActive 
+                   ? 'bg-indigo-50 border-indigo-400 scale-[0.98] shadow-inner' 
+                   : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+               }`}
+             >
+               <input {...getInputProps()} />
+               <div className={`w-32 h-32 rounded-[2.5rem] flex items-center justify-center transition-all duration-500 shadow-xl ${
+                 isDragActive ? 'bg-indigo-600 text-white rotate-12' : 'bg-slate-900 text-white group-hover:rotate-6'
+               }`}>
+                  {isDragActive ? <FileUp size={48} /> : <CloudUpload size={48} />}
+               </div>
+               <div className="mt-10 text-center space-y-3">
+                  <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">
+                    {isDragActive ? 'Drop to Start Parser' : 'Upload Data Sheet'}
+                  </h2>
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">
+                    Supported Formats: <span className="text-indigo-600">CSV (UTF-8)</span> only
+                  </p>
+                  <div className="pt-8 flex items-center gap-3 justify-center">
+                     <span className="w-12 h-[1px] bg-slate-200" />
+                     <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Or Browse Files</span>
+                     <span className="w-12 h-[1px] bg-slate-200" />
+                  </div>
+               </div>
+             </div>
           </div>
         </div>
       )}
 
       {status === 'preview' && (
-        <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-700">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-             <StatCard label="Records Detected" value={report.total} color="slate" icon={FileText} />
-             <StatCard label="Auto-Mapped Columns" value={`${report.mappedColumns} / ${SCHEMA_CONFIG.length}`} color={report.mappedColumns > 20 ? 'emerald' : 'amber'} icon={CheckCircle2} />
-             <StatCard label="Duplicates Found" value={report.duplicates} color={report.duplicates > 0 ? 'amber' : 'emerald'} icon={AlertTriangle} />
-             <StatCard label="Schema Confidence" value="100%" color="indigo" icon={Zap} />
-          </div>
+        <div className="space-y-8 animate-in slide-in-from-bottom-8 duration-500">
+           {/* Summary Cards */}
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+              <KpiCard label="Detected Entries" value={report.total} gradient="linear-gradient(135deg,#0f172a 0%,#334155 100%)" icon={FileSpreadsheet} />
+              <KpiCard label="Auto-Mapped" value={`${report.mappedColumns}/${SCHEMA_CONFIG.length}`} gradient="linear-gradient(135deg,#10b981 0%,#059669 100%)" icon={Zap} />
+              <KpiCard label="Registry Conflicts" value={report.duplicates} gradient={report.duplicates > 0 ? "linear-gradient(135deg,#f59e0b 0%,#d97706 100%)" : "linear-gradient(135deg,#10b981 0%,#059669 100%)"} icon={AlertTriangle} />
+              <KpiCard label="Critical Issues" value={report.missingCritical ? 'YES' : 'NONE'} gradient={report.missingCritical ? "linear-gradient(135deg,#ef4444 0%,#dc2626 100%)" : "linear-gradient(135deg,#6366f1 0%,#4f46e5 100%)"} icon={ShieldCheck} />
+           </div>
 
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-[550px]">
-            <div className="p-10 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
-               <div className="flex items-center space-x-3">
-                 <TableIcon size={20} className="text-indigo-600" />
-                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-[0.3em]">Data Preview & Verification</h3>
-               </div>
-               {report.missingCritical && (
-                 <div className="flex items-center space-x-2 text-rose-500 bg-rose-50 px-4 py-2 rounded-xl">
-                    <AlertCircle size={14} />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Missing Key Fields Detected</span>
+           {/* Preview Table */}
+           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[600px]">
+              <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/10">
+                 <div className="flex items-center gap-3">
+                    <TableIcon size={18} className="text-indigo-600" />
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-900">Integrity Preview Window</h3>
                  </div>
-               )}
-            </div>
-            <div className="flex-1 overflow-auto custom-scrollbar">
-              <table className="w-full text-left text-sm border-separate border-spacing-0">
-                <thead className="bg-white sticky top-0 z-10">
-                  <tr className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                    <th className="px-10 py-6 bg-white border-b border-slate-100 min-w-[200px]">Scholar Name</th>
-                    <th className="px-10 py-6 bg-white border-b border-slate-100 min-w-[150px]">Reg. Number</th>
-                    <th className="px-10 py-6 bg-white border-b border-slate-100 min-w-[150px]">CNIC</th>
-                    <th className="px-10 py-6 bg-white border-b border-slate-100 min-w-[150px]">Department</th>
-                    <th className="px-10 py-6 bg-white border-b border-slate-100 min-w-[200px]">Programme</th>
-                    <th className="px-10 py-6 bg-white border-b border-slate-100 min-w-[200px]">Supervisor</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {parsedData.map((row, idx) => (
-                    <tr key={idx} className={`hover:bg-slate-50/50 transition-colors ${row.isDuplicate ? 'bg-amber-50/30' : ''}`}>
-                      <td className="px-10 py-5 font-black text-slate-900 uppercase text-[13px]">
-                        <div className="flex items-center space-x-2">
-                          <span>{row.name || <span className="text-rose-400 italic">Missing</span>}</span>
-                          {row.isDuplicate && (
-                            <Tooltip content="Duplicate Record Detected">
-                              <AlertTriangle size={14} className="text-amber-500" />
-                            </Tooltip>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-10 py-5 font-bold text-indigo-600 text-[11px] uppercase tracking-tighter">{row.regNo || <span className="text-rose-400 italic">Missing</span>}</td>
-                      <td className="px-10 py-5 text-slate-500 font-mono text-xs">{row.cnic || <span className="text-rose-400 italic">Missing</span>}</td>
-                      <td className="px-10 py-5 text-[10px] font-bold text-slate-600 uppercase tracking-wide">{row.department || '---'}</td>
-                      <td className="px-10 py-5 text-[10px] font-bold text-slate-600 uppercase tracking-wide">{row.programme || '---'}</td>
-                      <td className="px-10 py-5 text-[10px] font-bold text-slate-600 uppercase tracking-wide">{row.supervisorName || '---'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                 {report.missingCritical && (
+                   <div className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg flex items-center gap-2 border border-rose-100 italic animate-pulse">
+                      <AlertCircle size={14} /> <span className="text-[9px] font-black uppercase tracking-widest">Missing Key Metadata Detected!</span>
+                   </div>
+                 )}
+              </div>
+              <div className="flex-1 overflow-auto custom-scrollbar">
+                 <table className="w-full text-left text-sm border-separate border-spacing-0">
+                    <thead className="bg-white sticky top-0 z-10">
+                       <tr className="bg-slate-50/50">
+                          <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 min-w-[200px]">Scholar Name</th>
+                          <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 w-44">Reg. Number</th>
+                          <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 w-48">CNIC</th>
+                          <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Study Programme</th>
+                          <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Status Node</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                       {parsedData.map((row, idx) => (
+                         <tr key={idx} className={`group hover:bg-slate-50/40 transition-colors ${row.isDuplicate ? 'bg-amber-50/40' : ''}`}>
+                            <td className="px-8 py-4">
+                               <div className="flex items-center gap-3">
+                                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${row.isDuplicate ? 'bg-amber-600 text-white' : 'bg-slate-900 text-white'}`}>
+                                     {row.name ? row.name[0] : '?'}
+                                  </div>
+                                  <div className="min-w-0">
+                                     <p className="font-black text-slate-900 leading-none truncate">{row.name || <span className="text-rose-500 italic">Name Missing</span>}</p>
+                                     <p className="text-[9px] font-black text-indigo-500 mt-1 uppercase tracking-widest">Scholar Record</p>
+                                  </div>
+                               </div>
+                            </td>
+                            <td className="px-8 py-4 text-[11px] font-black text-slate-600 tabular-nums uppercase">{row.regNo || <span className="text-rose-400 opacity-50">Empty</span>}</td>
+                            <td className="px-8 py-4 text-[10px] font-bold text-slate-500 tabular-nums tracking-widest">{row.cnic || <span className="text-rose-400 opacity-50">---</span>}</td>
+                            <td className="px-8 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate max-w-[250px]">{row.programme || '---'}</td>
+                            <td className="px-8 py-4">
+                               {row.isDuplicate ? (
+                                 <span className="px-2 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 w-fit">
+                                    <AlertTriangle size={10} /> Duplicate
+                                 </span>
+                               ) : (
+                                 <span className="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[8px] font-black uppercase tracking-widest w-fit">Valid Node</span>
+                               )}
+                            </td>
+                         </tr>
+                       ))}
+                    </tbody>
+                 </table>
+              </div>
+           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-10 bg-[#0f172a] rounded-xl shadow-sm">
-            <div className="space-y-1">
-              <h4 className="text-xl font-black text-white uppercase tracking-tight">Confirm Import?</h4>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                {report.total} records will be merged into the master registry.
-              </p>
-            </div>
-            <div className="flex items-center gap-4 w-full md:w-auto">
-               <button onClick={reset} className="flex-1 md:flex-none px-10 py-5 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-widest transition-colors">Cancel</button>
-               <button 
-                onClick={executeSync}
-                disabled={report.total === 0}
-                className="flex-1 md:flex-none flex items-center justify-center gap-4 px-16 py-6 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-[0.3em] shadow-sm hover:bg-indigo-500 transition-all active:scale-95 group disabled:opacity-50 disabled:pointer-events-none"
-               >
-                 <span>Execute Sync</span>
-                 <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform" />
-               </button>
-            </div>
-          </div>
+           {/* Final Sync Action */}
+           <div className="p-8 bg-slate-900 rounded-3xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 border border-slate-800">
+              <div className="flex items-center gap-6">
+                 <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center shadow-inner border border-white/5">
+                    <Database size={28} className="text-indigo-400" />
+                 </div>
+                 <div>
+                    <h4 className="text-xl font-black text-white uppercase tracking-tight">Execute Registry Sync?</h4>
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">{report.total} records queued for database commitment.</p>
+                 </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                 <button onClick={reset} className="flex-1 md:flex-none px-10 py-4 text-slate-400 hover:text-white font-black text-[10px] uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+                    <X size={16} /> Discard Data
+                 </button>
+                 <button 
+                   onClick={executeSync}
+                   className="flex-1 md:flex-none px-16 py-5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition-all active:scale-95 flex items-center justify-center gap-4 group"
+                 >
+                    <span>Commit to Master</span>
+                    <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform" />
+                 </button>
+              </div>
+           </div>
         </div>
       )}
 
+      {/* --- Loader Overlays --- */}
       {(status === 'processing' || status === 'parsing') && (
-        <div className="relative min-h-[500px] rounded-xl overflow-hidden border border-slate-100 bg-white">
-          <div className="absolute inset-0 z-10">
-            <BrandedLoader
-              variant="overlay"
-              message={status === 'parsing' ? 'Auto-detecting columns' : 'Committing to registry'}
-              subLabel="HEC · Smart import"
-              logoSize={140}
-            />
-          </div>
+        <div className="relative min-h-[500px] rounded-3xl overflow-hidden border border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
+          <BrandedLoader variant="overlay" message={status === 'parsing' ? 'Booting Metadata Parser' : 'Writing to Master Registry'} subLabel="AI-Powered Sync Optimization" logoSize={140} />
         </div>
       )}
 
+      {/* --- Error State --- */}
       {status === 'error' && (
-        <div className="p-16 bg-rose-50 border border-rose-100 rounded-xl flex flex-col items-center text-center space-y-8">
-          <div className="p-6 bg-rose-500 text-white rounded-xl shadow-sm">
+        <div className="p-20 bg-rose-50 border border-rose-200 rounded-3xl flex flex-col items-center text-center space-y-8 animate-in zoom-in-95">
+          <div className="w-24 h-24 bg-rose-600 text-white rounded-[2rem] flex items-center justify-center shadow-xl shadow-rose-600/25">
             <AlertCircle size={48} />
           </div>
-          <div className="space-y-3">
-            <h3 className="text-2xl font-black text-rose-950 uppercase tracking-tight">Parsing Protocol Failed</h3>
-            <p className="text-rose-700 text-[10px] font-black uppercase tracking-[0.3em]">Ensure you are using the official Smart Template provided above.</p>
+          <div className="max-w-md space-y-4">
+            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Sync Protocol Failure</h3>
+            <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">
+              We encountered a malformed data structure. Please ensure you're using the <span className="text-rose-600">Smart Template</span> provided above and your file is saved as <span className="text-rose-600">CSV (Comma Separated)</span>.
+            </p>
           </div>
-          <button onClick={reset} className="px-10 py-5 bg-white border border-rose-200 text-rose-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all">
-            Return to Upload
+          <button onClick={reset} className="px-12 py-5 bg-white border border-rose-200 text-rose-600 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-rose-600 hover:text-white transition-all shadow-sm active:scale-95">
+             Return to Dashboard
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
-
-const StatCard = ({ label, value, color, icon: Icon }: any) => (
-  <div className={`p-10 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center justify-between group`}>
-     <div>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{label}</p>
-        <p className={`text-3xl font-black text-${color}-600 tracking-tighter tabular-nums`}>{value}</p>
-     </div>
-     <div className={`p-4 bg-${color}-50 text-${color}-600 rounded-xl group-hover:scale-110 transition-transform`}>
-       <Icon size={28}/>
-     </div>
-  </div>
-);
 
 export default BulkUpload;
