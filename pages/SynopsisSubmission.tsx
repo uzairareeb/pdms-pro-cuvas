@@ -339,7 +339,7 @@ const SynopsisSubmission: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {paginatedStudents.map((student, idx) => (
-                <DesktopRow key={student.id} index={(currentPage-1)*itemsPerPage + idx + 1} student={student} pendingChanges={pendingChanges} onStatusChange={handleStatusChange} onDateChange={handleDateChange} onCommit={commitSubmission} currentRole={currentRole} />
+                <SynopsisDesktopRow key={student.id} index={(currentPage-1)*itemsPerPage + idx + 1} student={student} pendingChanges={pendingChanges} onStatusChange={handleStatusChange} onDateChange={handleDateChange} onCommit={commitSubmission} currentRole={currentRole} />
               ))}
             </tbody>
           </table>
@@ -348,7 +348,7 @@ const SynopsisSubmission: React.FC = () => {
         {/* Mobile Filter View */}
         <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
           {paginatedStudents.map(student => (
-            <MobileCard key={student.id} student={student} pendingChanges={pendingChanges} onStatusChange={handleStatusChange} onDateChange={handleDateChange} onCommit={commitSubmission} currentRole={currentRole} />
+            <SynopsisMobileCard key={student.id} student={student} pendingChanges={pendingChanges} onStatusChange={handleStatusChange} onDateChange={handleDateChange} onCommit={commitSubmission} currentRole={currentRole} />
           ))}
         </div>
 
@@ -416,7 +416,7 @@ const SynopsisSubmission: React.FC = () => {
 };
 
 // ─── Desktop Table Row Component ──────────────────────────────────────────────
-const DesktopRow = ({ index, student, pendingChanges, onStatusChange, onDateChange, onCommit, currentRole }: any) => {
+const SynopsisDesktopRow = ({ index, student, pendingChanges, onStatusChange, onDateChange, onCommit, currentRole }: any) => {
   const localData = pendingChanges[student.id] || { status: student.synopsis, date: student.synopsisSubmissionDate };
   const isDirty = pendingChanges[student.id] !== undefined;
   const isComplete = localData.status === 'Submitted' || localData.status === 'Approved';
@@ -500,7 +500,7 @@ const DesktopRow = ({ index, student, pendingChanges, onStatusChange, onDateChan
 };
 
 // ─── Mobile Card Component ────────────────────────────────────────────────────
-const MobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onCommit, currentRole }: any) => {
+const SynopsisMobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onCommit, currentRole }: any) => {
   const localData = pendingChanges[student.id] || { status: student.synopsis, date: student.synopsisSubmissionDate };
   const isDirty = pendingChanges[student.id] !== undefined;
   const isComplete = localData.status === 'Submitted' || localData.status === 'Approved';
