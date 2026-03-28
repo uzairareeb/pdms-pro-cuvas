@@ -510,7 +510,7 @@ const ThesisDesktopRow = ({ index, student, pendingChanges, onStatusChange, onDa
 };
 
 // ─── Mobile Card Component ────────────────────────────────────────────────────
-const MobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onCommit, currentRole }: any) => {
+const ThesisMobileCard = ({ student, pendingChanges, onStatusChange, onDateChange, onCommit, currentRole }: any) => {
   const localData = pendingChanges[student.id] || { status: student.gs4Form, date: student.coeSubmissionDate };
   const isDirty = pendingChanges[student.id] !== undefined;
   const isComplete = localData.status === 'Submitted' || localData.status === 'Approved';
