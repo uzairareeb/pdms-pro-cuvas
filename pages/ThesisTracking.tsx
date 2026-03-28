@@ -32,6 +32,9 @@ import { Link } from 'react-router-dom';
 type ViewFilter = 'Pending' | 'Submitted' | 'All' | '';
 type SemesterScope = 'focus' | 'all'; 
 
+// ─── Utility Functions ────────────────────────────────────────────────────────
+const normalizeDegree = (val: string) => (val || '').replace(/\./g, '').trim().toUpperCase();
+
 // ─── FilterSelect Component ───────────────────────────────────────────────────
 const FilterSelect = ({ label, value, icon: Icon, options, displayOptions, onChange }: any) => {
   const active = Boolean(value && value !== 'all' && value !== 'All');
@@ -108,8 +111,6 @@ const ThesisTracking: React.FC = () => {
       s.status !== StudentStatus.DROPPED
     );
   }, [students]);
-
-  const normalizeDegree = (val: string) => val.replace(/\./g, '').trim().toUpperCase();
 
   const filtered = useMemo(() => {
     return eligibleStudents.filter(s => {
@@ -204,9 +205,9 @@ const ThesisTracking: React.FC = () => {
 
   const exportCSV = () => {
     if (!filtered.length) return;
-    const headers = ['Scholar Name', 'Registration #', 'Degree', 'Department', 'Semester', 'Thesis Status', 'COE Dispatch Date', 'Lead Supervisor'];
+    const headers = ['Scholar Name', 'Registration #', 'Study Program', 'Department', 'Semester', 'Thesis Status', 'COE Dispatch Date', 'Lead Supervisor'];
     const rows = filtered.map(s => [
-      s.name, s.regNo, s.degree, s.department, s.currentSemester, 
+      s.name, s.regNo, s.programme, s.department, s.currentSemester, 
       pendingChanges[s.id]?.status || s.gs4Form, 
       pendingChanges[s.id]?.date || s.coeSubmissionDate || 'N/A', 
       s.supervisorName
@@ -222,7 +223,7 @@ const ThesisTracking: React.FC = () => {
   const exportPDF = async () => {
     if (!filtered.length) return;
     const body = filtered.map(s => [
-      s.name, s.regNo || '---', s.degree, s.department, s.currentSemester, 
+      s.name, s.regNo || '---', s.programme, s.department, s.currentSemester, 
       pendingChanges[s.id]?.status || s.gs4Form || 'Not Submitted', 
       pendingChanges[s.id]?.date || s.coeSubmissionDate || 'N/A', 
       s.supervisorName || '---'
@@ -230,7 +231,7 @@ const ThesisTracking: React.FC = () => {
     const { generateOfficialPDF } = await import('../utils/pdfExport');
     await generateOfficialPDF({
       reportName: 'Thesis & COE Dispatch Tracking',
-      headers: ['Scholar Name', 'Reg #', 'Degree', 'Department', 'Sem', 'Status', 'Dispatch Date', 'Supervisor'],
+      headers: ['Scholar Name', 'Reg #', 'Study Program', 'Department', 'Sem', 'Status', 'Dispatch Date', 'Supervisor'],
       data: body, landscape: true
     });
   };
@@ -331,7 +332,7 @@ const ThesisTracking: React.FC = () => {
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] w-12 text-center border-b border-slate-100">#</th>
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Scholar Details</th>
-                <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 w-32">Degree</th>
+                <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 min-w-[200px]">Study Program</th>
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-b border-slate-100 w-24">Sem</th>
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 w-64">Thesis Milestone</th>
               </tr>
@@ -436,13 +437,16 @@ const ThesisDesktopRow = ({ index, student, pendingChanges, onStatusChange, onCo
         </div>
       </td>
       <td className="px-8 py-6">
-         <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border w-fit ${
-           normalizeDegree(student.degree) === 'PHD' 
-             ? 'bg-purple-50 text-purple-700 border-purple-200' 
-             : 'bg-blue-50 text-blue-700 border-blue-200'
-         }`}>
-           {student.degree}
-         </span>
+         <div className="flex flex-col gap-1">
+            <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border w-fit ${
+              normalizeDegree(student.degree) === 'PHD' 
+                ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                : 'bg-blue-50 text-blue-700 border-blue-200'
+            }`}>
+              {student.degree}
+            </span>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight truncate max-w-[250px]">{student.programme}</p>
+         </div>
       </td>
       <td className="px-8 py-6 text-center">
          <span className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-[10px] font-black tabular-nums mx-auto border border-slate-200">{student.currentSemester}</span>
@@ -458,15 +462,7 @@ const ThesisDesktopRow = ({ index, student, pendingChanges, onStatusChange, onCo
                     : (localData.status === 'Not Submitted' ? 'bg-slate-50 text-slate-500 border-slate-200' : 'bg-amber-50 text-amber-700 border-amber-200')
                 } ${!currentRole?.canEdit ? 'opacity-50 cursor-not-allowed' : 'hover:border-indigo-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'}`}
                 value={localData.status}
-                onChange={(e) => {
-                  const newStatus = e.target.value;
-                  onStatusChange(student.id, newStatus);
-                  // For "functionality" preservation without a commit button, we can either auto-save or the user might have some other plan.
-                  // But the user said "Remove commit column". I'll add an auto-save logic if it's "Approved" or "Submitted" to keep it useful.
-                  const today = new Date().toISOString().split('T')[0];
-                  // Using a direct update if the user stripped the specialized commit UI
-                  // updateStudent({ ...student, gs4Form: newStatus as any, coeSubmissionDate: today });
-                }}
+                onChange={(e) => onStatusChange(student.id, e.target.value)}
               >
                 <option value="Not Submitted">Not Submitted</option>
                 <option value="Submitted">Submitted (COE)</option>
@@ -476,9 +472,6 @@ const ThesisDesktopRow = ({ index, student, pendingChanges, onStatusChange, onCo
                 <ChevronDown size={14} />
               </div>
            </div>
-           {/* We'll keep the save button hidden or accessible via a secondary means? No, the user said remove the column.
-               I'll move the save button to be a small icon next to the select ONLY if dirty.
-           */}
            {pendingChanges[student.id] && (
              <button 
                onClick={() => onCommit(student)}
