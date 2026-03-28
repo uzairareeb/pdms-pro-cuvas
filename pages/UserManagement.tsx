@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import { 
   UserPlus, 
@@ -18,23 +18,23 @@ import {
   ShieldCheck,
   MoreVertical,
   Eye,
-  EyeOff
+  EyeOff,
+  Activity,
+  UserCheck,
+  Shield,
+  Layers,
+  ChevronRight,
+  ArrowRight,
+  Fingerprint,
+  RotateCcw
 } from 'lucide-react';
 import { StaffUser, ModulePermissions, UserRole } from '../types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const MODULE_LIST = [
-  'Dashboard',
-  'StudentRecords',
-  'StudentRegistration',
-  'BulkUpload',
-  'DataExport',
-  'AuditTrail',
-  'SystemReports',
-  'UserManagement',
-  'Settings',
-  'ReadmissionRegistry',
-  'SynopsisSubmission',
-  'ThesisTracking'
+  'Dashboard', 'StudentRecords', 'StudentRegistration', 'BulkUpload', 
+  'DataExport', 'AuditTrail', 'SystemReports', 'UserManagement', 
+  'Settings', 'ReadmissionRegistry', 'SynopsisSubmission', 'ThesisTracking'
 ];
 
 const DEFAULT_PERMISSIONS: Record<UserRole, Record<string, ModulePermissions>> = {
@@ -82,14 +82,52 @@ const DEFAULT_PERMISSIONS: Record<UserRole, Record<string, ModulePermissions>> =
   }
 };
 
+// ─── KPI Card Component ───────────────────────────────────────────────────────
+const KpiCard = ({ label, value, gradient, icon: Icon }: any) => (
+  <div className="relative overflow-hidden rounded-2xl p-6 shadow-sm flex flex-col justify-between h-32" style={{ background: gradient }}>
+    <div className="absolute -bottom-2 -right-2 opacity-15 pointer-events-none">
+      <Icon size={80} className="text-white" />
+    </div>
+    <p className="text-[9px] font-black text-white/80 uppercase tracking-[0.2em]">{label}</p>
+    <h4 className="text-4xl font-black text-white tracking-tighter tabular-nums leading-none mb-1">{value}</h4>
+  </div>
+);
+
+// ─── FilterSelect Component ───────────────────────────────────────────────────
+const FilterSelect = ({ label, value, icon: Icon, options, onChange }: any) => {
+  const active = Boolean(value && value !== 'All');
+  return (
+    <div className="flex flex-col gap-1.5 flex-1 max-w-[200px]">
+      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</label>
+      <div className="relative">
+        <div className={`absolute left-4 top-1/2 -translate-y-1/2 z-10 transition-colors ${active ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <Icon size={14} />
+        </div>
+        <select
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          className={`w-full pl-10 pr-9 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none appearance-none cursor-pointer transition-all border
+            ${active
+              ? 'border-indigo-300 bg-indigo-50 text-indigo-700 focus:ring-4 focus:ring-indigo-500/10'
+              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/8'
+            }`}
+        >
+          {options.map((opt: string) => (
+            <option key={opt} value={opt}>{opt === 'All' ? `All ${label}s` : opt}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+};
+
 const UserManagement: React.FC = () => {
-  const { staff, addStaff, updateStaff, deleteStaff, currentUser, settings } = useStore();
+  const { staff, addStaff, updateStaff, deleteStaff, currentUser, settings, notify } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  // Deletion specific states for the high-security modal
   const [deletingUser, setDeletingUser] = useState<{id: string, name: string} | null>(null);
   
   const [formData, setFormData] = useState({
@@ -102,12 +140,22 @@ const UserManagement: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isCustomizingPermissions, setIsCustomizingPermissions] = useState(false);
 
+  const stats = useMemo(() => ({
+    total: staff.length,
+    admins: staff.filter(s => s.role === 'Admin').length,
+    editors: staff.filter(s => s.role === 'Editor').length,
+    viewers: staff.filter(s => s.role === 'Viewer').length,
+  }), [staff]);
+
+  const filteredStaff = useMemo(() => staff.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || user.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'All' || user.role === roleFilter;
+    const matchesStatus = statusFilter === 'All' || (statusFilter === 'Active' ? !!user.lastLogin : !user.lastLogin);
+    return matchesSearch && matchesRole && matchesStatus;
+  }), [staff, searchTerm, roleFilter, statusFilter]);
+
   const handleRoleChange = (role: StaffUser['role']) => {
-    setFormData({
-      ...formData,
-      role,
-      permissions: DEFAULT_PERMISSIONS[role]
-    });
+    setFormData({ ...formData, role, permissions: DEFAULT_PERMISSIONS[role] });
     setIsCustomizingPermissions(false);
   };
 
@@ -116,27 +164,11 @@ const UserManagement: React.FC = () => {
       ...formData,
       permissions: {
         ...formData.permissions,
-        [module]: {
-          ...formData.permissions[module],
-          [field]: value
-        }
+        [module]: { ...formData.permissions[module], [field]: value }
       }
     });
     setIsCustomizingPermissions(true);
   };
-
-  const stats = {
-    total: staff.length,
-    admins: staff.filter(s => s.role === 'Admin').length,
-    editors: staff.filter(s => s.role === 'Editor').length,
-    viewers: staff.filter(s => s.role === 'Viewer').length,
-  };
-
-  const filteredStaff = staff.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleEdit = (user: StaffUser) => {
     setEditingId(user.id);
@@ -152,195 +184,146 @@ const UserManagement: React.FC = () => {
   };
 
   const initiateDelete = (user: StaffUser) => {
-    // SECURITY CHECK: Prevent self-deletion or primary admin deletion via alert
     if (user.username === currentUser?.username || user.username === 'admin' || user.id === 'u1') {
-      alert("Institutional Security Protocol: You cannot delete the primary administrator account or your own active session profile. These records are protected.");
+      notify("Institutional Security Protocol: You cannot purge protected records or your own session.", "error");
       return;
     }
     setDeletingUser({ id: user.id, name: user.name });
   };
 
-  const confirmPurge = () => {
-    if (deletingUser) {
-      deleteStaff(deletingUser.id);
-      showNotification(`Account for ${deletingUser.name} has been permanently purged.`);
-      setDeletingUser(null);
-    }
-  };
-
-  const showNotification = (msg: string) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(null), 4000);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check for unique username on creation
     if (!editingId && staff.some(s => s.username === formData.username)) {
-      alert("Security Conflict: This username is already assigned to another access node.");
+      notify("Security Conflict: This username is already assigned.", "error");
       return;
     }
-
     if (editingId) {
-      const staffData: StaffUser = { 
-        ...formData, 
-        id: editingId,
-        permissions: isCustomizingPermissions ? formData.permissions : undefined
-      };
-      updateStaff(staffData);
-      showNotification(`Staff record for ${formData.name} updated.`);
+      updateStaff({ ...formData, id: editingId, permissions: isCustomizingPermissions ? formData.permissions : undefined });
+      notify(`Identity for ${formData.name} updated.`, "success");
     } else {
-      addStaff({
-        ...formData,
-        permissions: isCustomizingPermissions ? formData.permissions : undefined
-      } as Omit<StaffUser, 'id'>);
-      showNotification(`New access node provisioned for ${formData.name}..`);
+      addStaff({ ...formData, permissions: isCustomizingPermissions ? formData.permissions : undefined } as Omit<StaffUser, 'id'>);
+      notify(`New access node provisioned for ${formData.name}.`, "success");
     }
-    setIsModalOpen(false);
-    setEditingId(null);
-    setShowPassword(false);
-    setFormData({ username: '', name: '', role: 'Viewer', password: '', permissions: DEFAULT_PERMISSIONS['Viewer'] });
-    setIsCustomizingPermissions(false);
+    setIsModalOpen(false); setEditingId(null);
   };
 
   return (
-    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print">
-        <div className="flex items-center space-x-5">
-          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center overflow-hidden p-1 shadow-sm border border-slate-100 dark:border-slate-700">
-            {settings.institution.logo ? (
-              <img 
-                src={settings.institution.logo} 
-                className="w-full h-full object-contain" 
-                alt="Logo" 
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <User className="text-slate-200 dark:text-slate-700" size={32} />
-            )}
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="space-y-8 pb-20 px-4 max-w-7xl mx-auto">
+      
+      {/* ── Page Header ────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex items-center gap-5">
+          <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center shadow-sm overflow-hidden p-1 shrink-0">
+             <img src={settings.institution.logo || ''} className="w-full h-full object-contain" alt="Logo" referrerPolicy="no-referrer" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Staff Directory</h1>
-            <p className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Identity & Permission Management Control</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">Identity Control</h1>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">Personnel Registry & Permission Management · {settings.institution.name || 'CUVAS'}</p>
           </div>
         </div>
         <button 
-          onClick={() => {
-            setEditingId(null);
-            setFormData({ username: '', name: '', role: 'Viewer', password: '', permissions: DEFAULT_PERMISSIONS['Viewer'] });
-            setIsCustomizingPermissions(false);
-            setIsModalOpen(true);
-          }}
-          className="flex items-center justify-center space-x-3 px-8 md:px-10 py-4 md:py-5 bg-[#0a0c10] dark:bg-indigo-600 text-white rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all active:scale-95 w-full md:w-auto"
+          onClick={() => { setEditingId(null); setIsModalOpen(true); }}
+          className="flex items-center justify-center gap-3 px-10 py-5 bg-[#0f172a] text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 group"
         >
           <UserPlus size={18} />
           <span>Provision Account</span>
+          <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
-      
-      {/* System Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 no-print">
-        <StatCard label="Total Personnel" value={stats.total} icon={User} color="indigo" />
-        <StatCard label="Admins" value={stats.admins} icon={ShieldCheck} color="emerald" />
-        <StatCard label="Editors" value={stats.editors} icon={ShieldAlert} color="indigo" />
-        <StatCard label="Viewers" value={stats.viewers} icon={Eye} color="slate" />
+
+      {/* ── KPI Grid ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <KpiCard label="Total Personnel" value={stats.total} gradient="linear-gradient(135deg,#0f172a 0%,#334155 100%)" icon={Users} />
+        <KpiCard label="Admin Tier" value={stats.admins} gradient="linear-gradient(135deg,#6366f1 0%,#4f46e5 100%)" icon={ShieldCheck} />
+        <KpiCard label="Editor Access" value={stats.editors} gradient="linear-gradient(135deg,#f59e0b 0%,#d97706 100%)" icon={Shield} />
+        <KpiCard label="Public Viewers" value={stats.viewers} gradient="linear-gradient(135deg,#64748b 0%,#94a3b8 100%)" icon={Eye} />
       </div>
 
-      {successMessage && (
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-100 dark:border-emerald-900/30 p-6 rounded-xl flex items-center space-x-4 animate-in slide-in-from-top-4 duration-500 shadow-sm">
-          <div className="p-2 bg-emerald-500 text-white rounded-lg">
-            <CheckCircle2 size={24} />
-          </div>
-          <span className="text-emerald-800 dark:text-emerald-400 text-xs font-black uppercase tracking-widest">{successMessage}</span>
+      {/* ── Search & Filter Engine ─────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-8 flex flex-col md:flex-row items-end gap-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -mr-10 -mt-10" />
+        <div className="flex-1 w-full space-y-1.5">
+           <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Search Identities</label>
+           <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={18} />
+              <input 
+                type="text" 
+                placeholder="Name or Username..." 
+                className="w-full pl-12 pr-6 py-3.5 bg-white border border-slate-200 rounded-xl text-sm font-medium outline-none hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 transition-all"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+           </div>
         </div>
-      )}
-
-      <div className="relative group max-w-xl no-print">
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 group-focus-within:text-indigo-600 transition-colors" size={20} />
-        <input 
-          type="text"
-          placeholder="Filter staff by name, role or username..."
-          className="w-full pl-16 pr-8 py-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-sm outline-none focus:border-indigo-600 font-bold text-sm placeholder:text-slate-300 dark:placeholder:text-slate-700 dark:text-white"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
+        <div className="flex flex-wrap gap-5 w-full md:w-auto">
+           <FilterSelect label="Privilege Tier" icon={Layers} value={roleFilter} options={['All', 'Admin', 'Editor', 'Viewer']} onChange={setRoleFilter} />
+           <FilterSelect label="Status Hub" icon={Activity} value={statusFilter} options={['All', 'Active', 'Inactive']} onChange={setStatusFilter} />
+           <button onClick={() => { setSearchTerm(''); setRoleFilter('All'); setStatusFilter('All'); }} className="px-6 py-3.5 bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 border border-slate-100 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 mb-[1px]">
+             <RotateCcw size={14} /> Reset
+           </button>
+        </div>
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* ── Table & List ────────────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+        <div className="hidden md:block overflow-x-auto flex-1">
           <table className="w-full text-left text-sm border-separate border-spacing-0">
-            <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 uppercase text-[9px] font-black tracking-[0.3em]">
-              <tr>
-                <th className="px-10 py-8 border-b border-slate-100 dark:border-slate-800">Identity Details</th>
-                <th className="px-10 py-8 border-b border-slate-100 dark:border-slate-800">Auth Privilege</th>
-                <th className="px-10 py-8 border-b border-slate-100 dark:border-slate-800">Last Telemetry</th>
-                <th className="px-10 py-8 border-b border-slate-100 dark:border-slate-800 text-right">Registry Controls</th>
+            <thead>
+              <tr className="bg-slate-50/50">
+                <th className="px-10 py-6 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-slate-100 min-w-[300px]">Identity Details</th>
+                <th className="px-10 py-6 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-slate-100 min-w-[200px]">Privilege Tier</th>
+                <th className="px-10 py-6 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-slate-100 min-w-[200px]">Status Node</th>
+                <th className="px-10 py-6 text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-slate-100 text-right">Registry Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-50">
               {filteredStaff.map(user => {
+                const isActive = !!user.lastLogin;
                 const isProtected = user.username === 'admin';
                 return (
-                  <tr key={user.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors group">
-                    <td className="px-10 py-8">
-                      <div className="flex items-center space-x-5">
-                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl transition-all shadow-sm ${
-                           user.username === currentUser?.username 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
-                         }`}>
-                           {user.name[0]}
+                  <tr key={user.id} className="hover:bg-indigo-50/20 transition-all group">
+                    <td className="px-10 py-6">
+                      <div className="flex items-center gap-4">
+                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl shadow-sm transition-all group-hover:scale-110 ${user.username === currentUser?.username ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white'}`}>
+                            {user.name[0]}
                          </div>
                          <div>
-                           <p className="font-black text-slate-900 dark:text-white text-base flex items-center">
-                             {user.name}
-                             {user.username === currentUser?.username && (
-                               <span className="ml-2 px-2 py-0.5 bg-emerald-500 text-white rounded text-[8px] font-black uppercase tracking-tighter">You</span>
-                             )}
-                           </p>
-                           <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-0.5">ID: {user.username}</p>
+                            <p className="text-base font-black text-slate-900 tracking-tight flex items-center">
+                               {user.name}
+                               {user.username === currentUser?.username && <span className="ml-2 px-1.5 py-0.5 bg-emerald-500 text-white rounded text-[7.5px] font-black uppercase tracking-tighter shadow-sm animate-pulse">Session active</span>}
+                            </p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">ID: {user.username}</p>
                          </div>
                       </div>
                     </td>
-                    <td className="px-10 py-8">
-                      <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
-                        user.role === 'Admin' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50' :
-                        user.role === 'Editor' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50' :
-                        'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                      }`}>
-                        {user.role}
-                      </span>
+                    <td className="px-10 py-6">
+                       <span className={`px-4 py-1.5 rounded-xl text-[8.5px] font-black uppercase tracking-widest border flex items-center gap-2 w-fit ${
+                         user.role === 'Admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                         user.role === 'Editor' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                         'bg-slate-50 text-slate-500 border-slate-200'
+                       }`}>
+                         {user.role === 'Admin' ? <ShieldCheck size={12} /> : user.role === 'Editor' ? <Shield size={12} /> : <Eye size={12} />}
+                         {user.role}
+                       </span>
                     </td>
-                    <td className="px-10 py-8">
-                      <div className="flex items-center space-x-2 text-slate-400 dark:text-slate-500 font-black text-[10px] uppercase">
-                        <ShieldAlert size={14} className={user.lastLogin ? 'text-amber-500' : 'text-slate-200 dark:text-slate-700'} />
-                        <span>{user.lastLogin || 'Registry Pending'}</span>
-                      </div>
+                    <td className="px-10 py-6">
+                       <div className="flex items-center gap-3">
+                          <div className={`px-3 py-1.5 rounded-2xl flex items-center gap-2 border text-[8.5px] font-black uppercase tracking-widest ${isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-200 opacity-60'}`}>
+                             <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                             {isActive ? 'Active Node' : 'Inactive Agent'}
+                          </div>
+                          {user.lastLogin && <span className="text-[10px] font-bold text-slate-300 tabular-nums uppercase">{user.lastLogin}</span>}
+                       </div>
                     </td>
-                    <td className="px-10 py-8 text-right">
-                      <div className="flex items-center justify-end space-x-3">
-                         <button 
-                          onClick={() => handleEdit(user)}
-                          className="p-3.5 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 rounded-xl shadow-sm border border-slate-100/50 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 transition-all"
-                          title="Modify Profile"
-                         >
-                           <Edit2 size={18} />
-                         </button>
-                         <button 
-                          onClick={() => initiateDelete(user)}
-                          disabled={isProtected}
-                          className={`p-3.5 transition-all shadow-sm border border-slate-100/50 dark:border-slate-800 rounded-xl ${
-                            isProtected 
-                            ? 'text-slate-200 dark:text-slate-800 cursor-not-allowed opacity-50' 
-                            : 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
-                          }`}
-                          title={isProtected ? 'Protected System Record' : 'Purge Account'}
-                         >
-                           <Trash2 size={18} />
-                         </button>
-                      </div>
+                    <td className="px-10 py-6 text-right">
+                       <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleEdit(user)} className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 rounded-xl shadow-sm transition-all active:scale-90" title="Modify Node">
+                             <Edit2 size={16} />
+                          </button>
+                          <button onClick={() => initiateDelete(user)} disabled={isProtected} className={`p-3 bg-white border border-slate-200 rounded-xl shadow-sm transition-all active:scale-90 ${isProtected ? 'opacity-20 cursor-not-allowed' : 'text-slate-400 hover:text-rose-600 hover:border-rose-200'}`} title={isProtected ? 'Protected Protocol' : 'Purge Node'}>
+                             <Trash2 size={16} />
+                          </button>
+                       </div>
                     </td>
                   </tr>
                 );
@@ -348,342 +331,195 @@ const UserManagement: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden grid grid-cols-1 gap-4">
-        {filteredStaff.map(user => {
-           const isProtected = user.username === 'admin';
-           return (
-             <div key={user.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm p-6 flex flex-col space-y-5">
-                <div className="flex items-start justify-between">
-                   <div className="flex items-center space-x-4">
-                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-black text-xl shadow-inner ${
-                         user.username === currentUser?.username ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600'
-                       }`}>
-                         {user.name[0]}
-                      </div>
-                      <div>
-                         <h3 className="text-lg font-black text-slate-900 dark:text-white leading-none">{user.name}</h3>
-                         <div className="flex items-center space-x-2 mt-2">
-                           <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-700">
-                             {user.username}
-                           </p>
-                           {user.username === currentUser?.username && (
-                              <span className="px-2 py-1 bg-emerald-500 text-white rounded-lg text-[8px] font-black uppercase tracking-tighter">You</span>
-                           )}
-                         </div>
-                      </div>
+        {/* Mobile View */}
+        <div className="md:hidden p-6 space-y-4">
+           {filteredStaff.map(user => (
+             <div key={user.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6">
+                <div className="flex items-center gap-4">
+                   <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-xl">{user.name[0]}</div>
+                   <div className="min-w-0">
+                      <h3 className="text-lg font-black text-slate-900 tracking-tight leading-none truncate">{user.name}</h3>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">ID: {user.username}</p>
                    </div>
                 </div>
-
-                <div className="space-y-3">
-                   <div className="flex justify-between items-center border-b border-slate-50 dark:border-slate-800 pb-3">
-                      <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Role Tier</span>
-                      <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
-                        user.role === 'Admin' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50' :
-                        user.role === 'Editor' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50' :
-                        'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                      }`}>
-                        {user.role}
-                      </span>
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50">
+                   <div className="space-y-1">
+                      <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Privilege</p>
+                      <p className="text-[10px] font-black text-indigo-600 uppercase tracking-tight">{user.role}</p>
                    </div>
-                   <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Last Access</span>
-                      <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">{user.lastLogin || 'Never'}</span>
+                   <div className="space-y-1">
+                      <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Status Node</p>
+                      <p className={`text-[10px] font-black uppercase tracking-tight ${!!user.lastLogin ? 'text-emerald-500' : 'text-slate-400'}`}>{!!user.lastLogin ? 'Active' : 'Inactive'}</p>
                    </div>
                 </div>
-
                 <div className="flex gap-3 pt-2">
-                   <button 
-                     onClick={() => handleEdit(user)}
-                     className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white transition-all flex items-center justify-center gap-2 shadow-sm"
-                   >
-                     <Edit2 size={14} /> Edit
+                   <button onClick={() => handleEdit(user)} className="flex-1 py-3.5 bg-slate-50 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
+                      <Edit2 size={14} /> Profile
                    </button>
-                   <button 
-                     onClick={() => initiateDelete(user)}
-                     disabled={isProtected}
-                     className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-sm ${
-                       isProtected 
-                       ? 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 cursor-not-allowed' 
-                       : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white'
-                     }`}
-                   >
-                     <Trash2 size={14} /> Purge
+                   <button onClick={() => initiateDelete(user)} disabled={user.username === 'admin'} className="flex-1 py-3.5 bg-rose-50 text-rose-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-20">
+                      <Trash2 size={14} /> Purge
                    </button>
                 </div>
              </div>
-           );
-        })}
+           ))}
+        </div>
+
+        {filteredStaff.length === 0 && (
+          <div className="py-24 flex flex-col items-center text-center space-y-6">
+             <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200"><UserX size={40} /></div>
+             <div>
+                <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">No Matching Identities</h4>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-2">Adjust your scopes or reset the registry filter.</p>
+             </div>
+          </div>
+        )}
       </div>
 
-      {filteredStaff.length === 0 && (
-        <div className="px-10 py-20 text-center bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="p-8 bg-slate-50 dark:bg-slate-800 text-slate-200 dark:text-slate-700 rounded-xl">
-              <UserX size={48} />
-            </div>
-            <div>
-              <p className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">No Matching Staff Members</p>
-              <p className="text-slate-400 dark:text-slate-500 text-xs font-bold mt-1">Refine your query or check identity spelling.</p>
-            </div>
+      {/* ── Provisioning Modal ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsModalOpen(false)} />
+             <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="p-10 border-b border-slate-50 flex items-center justify-between bg-slate-50/50 backdrop-blur-md">
+                   <div>
+                      <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">{editingId ? 'Identity Calibration' : 'Provision New Identity'}</h3>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Security Hub Access Protocol</p>
+                   </div>
+                   <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 flex items-center justify-center bg-white border border-slate-100 text-slate-300 hover:text-rose-500 rounded-xl transition-all shadow-sm active:scale-95"><X size={20} /></button>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-8">
+                   <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Full Legal Name</label>
+                            <div className="relative group">
+                              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
+                              <input required className="w-full pl-11 pr-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-black text-[13px] tracking-tight text-slate-900 transition-all placeholder:text-slate-300" 
+                              value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Official Surname & First" />
+                            </div>
+                         </div>
+                         <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Access ID (Email)</label>
+                            <div className="relative group">
+                              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
+                              <input required type="email" className="w-full pl-11 pr-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-black text-[13px] tracking-tight text-slate-900 transition-all placeholder:text-slate-300"
+                              value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} placeholder="id@domain.com" />
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                         <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Security Tier</label>
+                            <div className="relative group">
+                               <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
+                               <select className="w-full pl-11 pr-10 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-black text-[10px] uppercase tracking-widest text-slate-900 appearance-none cursor-pointer overflow-hidden transition-all"
+                               value={formData.role || ''} onChange={e => handleRoleChange(e.target.value as any)}>
+                                 <option value="Admin">System Administrator</option>
+                                 <option value="Editor">Data Controller (Editor)</option>
+                                 <option value="Viewer">Institutional Viewer</option>
+                               </select>
+                               <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300"><ChevronRight size={14} className="rotate-90" /></div>
+                            </div>
+                         </div>
+                         <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Assigned Passkey</label>
+                            <div className="relative group">
+                               <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
+                               <input required={!editingId} type={showPassword ? "text" : "password"} className="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-bold text-sm tracking-widest text-slate-900 transition-all placeholder:text-slate-300"
+                               value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder={editingId ? 'Maintain Institutional Pass' : '••••••••'} />
+                               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-600 transition-colors"><Eye size={16} /></button>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="pt-8 border-t border-slate-50 space-y-6">
+                      <div className="flex items-center justify-between">
+                         <div>
+                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-900">Module Access Control</h4>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Granular Permission Matrix</p>
+                         </div>
+                         <div className="flex items-center gap-2">
+                           {isCustomizingPermissions && <button type="button" onClick={() => handleRoleChange(formData.role)} className="px-2 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg text-[8px] font-black uppercase tracking-widest hover:bg-amber-600 hover:text-white transition-all">Reset Matrix</button>}
+                           <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${isCustomizingPermissions ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400'}`}>{isCustomizingPermissions ? 'Custom Matrix' : 'Role Default'}</span>
+                         </div>
+                      </div>
+                      
+                      <div className="overflow-hidden border border-slate-100 rounded-2xl">
+                        <table className="w-full text-left text-[9px] border-separate border-spacing-0">
+                          <thead className="bg-slate-50">
+                            <tr>
+                              <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 w-1/3 text-[8px]">Academic Unit</th>
+                              <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-b border-l border-slate-100 w-1/6 text-[8px]">View</th>
+                              <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-b border-l border-slate-100 w-1/6 text-[8px]">Create</th>
+                              <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-b border-l border-slate-100 w-1/6 text-[8px]">Edit</th>
+                              <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-b border-l border-slate-100 w-1/6 text-[8px]">Purge</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                             {MODULE_LIST.map(mod => {
+                               const perms = formData.permissions[mod] || { view: false, create: false, edit: false, delete: false };
+                               return (
+                                 <tr key={mod} className="hover:bg-slate-50 transition-colors">
+                                   <td className="px-6 py-3 font-bold text-slate-600 tracking-tight">{mod.replace(/([A-Z])/g, ' $1').trim()}</td>
+                                   <td className="px-6 py-3 text-center border-l border-slate-50"><PermissionCheckbox checked={perms.view} onChange={v => handlePermissionChange(mod, 'view', v)} /></td>
+                                   <td className="px-6 py-3 text-center border-l border-slate-50"><PermissionCheckbox checked={perms.create} onChange={v => handlePermissionChange(mod, 'create', v)} /></td>
+                                   <td className="px-6 py-3 text-center border-l border-slate-50"><PermissionCheckbox checked={perms.edit} onChange={v => handlePermissionChange(mod, 'edit', v)} /></td>
+                                   <td className="px-6 py-3 text-center border-l border-slate-50"><PermissionCheckbox checked={perms.delete} onChange={v => handlePermissionChange(mod, 'delete', v)} /></td>
+                                 </tr>
+                               );
+                             })}
+                          </tbody>
+                        </table>
+                      </div>
+                   </div>
+                </form>
+
+                <div className="p-10 border-t border-slate-50 flex flex-col md:flex-row items-center justify-end gap-5 bg-slate-50/50">
+                   <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-4 text-slate-400 hover:text-rose-500 font-black text-[10px] uppercase tracking-widest transition-colors order-2 md:order-1">Discard Request</button>
+                   <button onClick={handleSubmit} className="px-12 py-5 bg-[#0f172a] text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-4 w-full md:w-auto order-1 md:order-2">
+                      <Save size={18} />
+                      <span>{editingId ? 'Commit Identities' : 'Activate Access Node'}</span>
+                   </button>
+                </div>
+             </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* Account Provisioning/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-[#0a0c10]/80 dark:bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300">
-           <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-white/5 animate-in zoom-in-95 duration-400 h-full max-h-[90vh] md:h-auto">
-              <div className="p-8 md:p-12 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-20">
-                 <div>
-                    <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{editingId ? 'Modify Access' : 'New Identity'}</h3>
-                    <p className="text-slate-400 dark:text-slate-500 text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] mt-2">Security Protocol</p>
-                 </div>
-                 <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">
-                    <X size={24} />
-                 </button>
-              </div>
-              
-              <form onSubmit={handleSubmit} className="p-8 md:p-12 space-y-8 md:space-y-10 overflow-y-auto custom-scrollbar">
-                 <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-2 block">Full Legal Name</label>
-                    <div className="relative">
-                      <User className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
-                      <input 
-                        required
-                        autoFocus
-                        className="w-full pl-16 pr-8 py-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-600 font-bold text-sm dark:text-white"
-                        value={formData.name}
-                        onChange={e => setFormData({...formData, name: e.target.value})}
-                        placeholder="Staff Name"
-                      />
-                    </div>
-                 </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-2 block">Institutional Email (Google)</label>
-                        <div className="relative">
-                          <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
-                          <input 
-                            required
-                            type="email"
-                            className="w-full pl-16 pr-8 py-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-600 font-bold text-sm dark:text-white"
-                            value={formData.username}
-                            onChange={e => setFormData({...formData, username: e.target.value})}
-                            placeholder="user@cuvas.edu.pk"
-                          />
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-2 block">Access Privilege</label>
-                        <div className="relative">
-                           <ShieldCheck className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
-                           <select 
-                             className="w-full pl-16 pr-8 py-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-600 font-bold text-sm appearance-none cursor-pointer dark:text-white"
-                             value={formData.role || ''}
-                             onChange={e => handleRoleChange(e.target.value as any)}
-                           >
-                             <option value="Admin">Admin</option>
-                             <option value="Editor">Editor</option>
-                             <option value="Viewer">Viewer</option>
-                           </select>
-                           <MoreVertical className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 pointer-events-none" size={16} />
-                        </div>
-                        <div className="mt-3 px-6 py-4 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100/50 dark:border-indigo-900/30">
-                           <p className="text-[10px] text-indigo-700 dark:text-indigo-400 font-bold leading-relaxed">
-                              <span className="uppercase tracking-widest mr-2 opacity-60">Privilege Scope:</span>
-                              {formData.role === 'Admin' && 'Full control over the system (create, read, update, delete, and manage all settings).'}
-                              {formData.role === 'Editor' && 'Can view and edit all data, but cannot manage system-level settings or critical controls.'}
-                              {formData.role === 'Viewer' && 'Read-only access; can only view data and system details, with no permission to modify.'}
-                           </p>
-                        </div>
-                    </div>
-                 </div>
-
-                 <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 ml-2 block">System Password</label>
-                    <div className="relative group">
-                       <Key className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 group-focus-within:text-indigo-600 transition-colors" size={18} />
-                       <input 
-                        required={!editingId}
-                        type={showPassword ? "text" : "password"}
-                        className="w-full pl-16 pr-20 py-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-600 font-bold text-sm dark:text-white"
-                        value={formData.password}
-                        onChange={e => setFormData({...formData, password: e.target.value})}
-                        placeholder={editingId ? 'Maintain Institutional Default' : '••••••••'}
-                       />
-                       <button 
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                       >
-                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                       </button>
-                    </div>
-                 </div>
-
-                  <div className="space-y-6 pt-5">
-                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                       <div>
-                          <h4 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">Module Access & Permissions</h4>
-                          <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Granular control per academic unit</p>
-                       </div>
-                       <div className="flex items-center space-x-3">
-                          {isCustomizingPermissions && (
-                             <button 
-                               type="button" 
-                               onClick={() => handleRoleChange(formData.role)}
-                               className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[8px] font-black uppercase tracking-widest rounded-lg border border-indigo-100 dark:border-indigo-900/50 hover:bg-indigo-100 transition-all"
-                             >
-                               Reset to Role Defaults
-                             </button>
-                          )}
-                          <span className={`px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${isCustomizingPermissions ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                             {isCustomizingPermissions ? 'Custom Overrides Active' : 'Standard Role Presets'}
-                          </span>
-                       </div>
-                    </div>
-
-                    <div className="overflow-x-auto -mx-8 md:-mx-12 px-8 md:px-12 pb-4">
-                      <table className="w-full text-left text-[10px] border-separate border-spacing-0">
-                        <thead>
-                          <tr className="bg-slate-50/50 dark:bg-slate-800/50">
-                            <th className="px-6 py-4 rounded-tl-xl font-black text-slate-400 uppercase tracking-widest border border-slate-100 dark:border-slate-800">Module</th>
-                            <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-y border-r border-slate-100 dark:border-slate-800">View</th>
-                            <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-y border-r border-slate-100 dark:border-slate-800">Create</th>
-                            <th className="px-6 py-4 font-black text-slate-400 uppercase tracking-widest text-center border-y border-r border-slate-100 dark:border-slate-800">Edit</th>
-                            <th className="px-6 py-4 rounded-tr-xl font-black text-slate-400 uppercase tracking-widest text-center border-y border-r border-slate-100 dark:border-slate-800">Delete</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {MODULE_LIST.map((module) => {
-                             const perms = formData.permissions[module] || { view: false, create: false, edit: false, delete: false };
-                             return (
-                               <tr key={module} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors">
-                                 <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300 border-x border-b border-slate-100 dark:border-slate-800">
-                                   {module.replace(/([A-Z])/g, ' $1').trim()}
-                                 </td>
-                                 <td className="px-6 py-4 text-center border-r border-b border-slate-100 dark:border-slate-800">
-                                   <PermissionCheckbox 
-                                     checked={perms.view} 
-                                     onChange={(val) => handlePermissionChange(module, 'view', val)} 
-                                   />
-                                 </td>
-                                 <td className="px-6 py-4 text-center border-r border-b border-slate-100 dark:border-slate-800">
-                                   <PermissionCheckbox 
-                                     checked={perms.create} 
-                                     onChange={(val) => handlePermissionChange(module, 'create', val)} 
-                                   />
-                                 </td>
-                                 <td className="px-6 py-4 text-center border-r border-b border-slate-100 dark:border-slate-800">
-                                   <PermissionCheckbox 
-                                     checked={perms.edit} 
-                                     onChange={(val) => handlePermissionChange(module, 'edit', val)} 
-                                   />
-                                 </td>
-                                 <td className="px-6 py-4 text-center border-r border-b border-slate-100 dark:border-slate-800">
-                                   <PermissionCheckbox 
-                                     checked={perms.delete} 
-                                     onChange={(val) => handlePermissionChange(module, 'delete', val)} 
-                                   />
-                                 </td>
-                               </tr>
-                             );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+      {/* ── Purge Confirmation ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {deletingUser && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setDeletingUser(null)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+               <div className="p-10 text-center space-y-6">
+                  <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner"><AlertTriangle size={36} /></div>
+                  <div className="space-y-2">
+                     <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Purge Protocol</h3>
+                     <p className="text-slate-500 text-sm font-medium leading-relaxed">Identity for <span className="font-black text-slate-900">"{deletingUser.name}"</span> will be permanently revoked from the system registry. Proceed with caution.</p>
                   </div>
-              </form>
-
-              <div className="p-8 md:p-12 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col md:flex-row items-center justify-end gap-4 md:gap-6 sticky bottom-0">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full md:w-auto px-10 py-5 text-slate-400 dark:text-slate-500 font-black text-xs uppercase tracking-[0.25em] hover:text-slate-900 dark:hover:text-white order-2 md:order-1">Cancel</button>
-                <button type="submit" onClick={handleSubmit} className="w-full md:w-auto px-16 py-6 bg-[#0a0c10] dark:bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-[0.3em] shadow-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all flex items-center justify-center order-1 md:order-2">
-                   <Save size={18} className="mr-3" />
-                   <span>{editingId ? 'Commit Updates' : 'Activate Account'}</span>
-                </button>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* High-Security Delete Confirmation Modal */}
-      {deletingUser && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/80 dark:bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-400 border border-white/10">
-            <div className="p-10 text-center space-y-6">
-              <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center mx-auto shadow-inner">
-                <AlertTriangle size={40} />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Security Purge Protocol</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed">
-                  Are you absolutely certain you want to permanently delete the profile for <span className="text-slate-900 dark:text-white font-black">"{deletingUser.name}"</span>?
-                </p>
-                <p className="text-[10px] text-rose-600 dark:text-rose-400 font-black uppercase tracking-widest pt-2">Warning: Institutional access will be revoked immediately.</p>
-              </div>
-            </div>
-            <div className="p-10 bg-slate-50 dark:bg-slate-950 flex gap-4">
-              <button 
-                type="button"
-                onClick={() => setDeletingUser(null)} 
-                className="flex-1 py-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
-              >
-                Abort
-              </button>
-              <button 
-                type="button"
-                onClick={confirmPurge} 
-                className="flex-1 py-5 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-sm"
-              >
-                Purge
-              </button>
-            </div>
+               </div>
+               <div className="p-8 bg-slate-50 flex gap-4">
+                  <button onClick={() => setDeletingUser(null)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all">Cancel</button>
+                  <button onClick={() => { deleteStaff(deletingUser.id); notify(`Identity purged.`, "success"); setDeletingUser(null); }} className="flex-1 py-4 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-md">Confirm Purge</button>
+               </div>
+            </motion.div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 
 const PermissionCheckbox = ({ checked, onChange }: { checked: boolean; onChange: (val: boolean) => void }) => (
-  <div className="flex justify-center">
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-        checked 
-          ? 'bg-indigo-600 border-indigo-600 text-white' 
-          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-transparent'
-      }`}
-    >
-      <CheckCircle2 size={14} className={checked ? 'opacity-100' : 'opacity-0'} />
-    </button>
-  </div>
+  <button type="button" onClick={() => onChange(!checked)} className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all mx-auto ${checked ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-100 border-slate-200 text-transparent'}`}>
+    <CheckCircle2 size={12} className={checked ? 'opacity-100' : 'opacity-0'} />
+  </button>
 );
-
-const StatCard = ({ label, value, icon: Icon, color }: any) => {
-  const colors: any = {
-    indigo: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30',
-    emerald: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30',
-    amber: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/30',
-    slate: 'bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800',
-  };
-
-  return (
-    <div className={`p-6 rounded-xl border ${colors[color]} shadow-sm flex items-center space-x-5 transition-all`}>
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 shadow-sm`}>
-        <Icon size={20} />
-      </div>
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{label}</p>
-        <p className="text-2xl font-black mt-0.5">{value}</p>
-      </div>
-    </div>
-  );
-};
 
 export default UserManagement;
