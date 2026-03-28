@@ -14,6 +14,7 @@ import SystemReports from './pages/SystemReports';
 import UserManagement from './pages/UserManagement';
 import Settings from './pages/Settings';
 import DatabaseSettings from './pages/DatabaseSettings';
+import SessionSettings from './pages/SessionSettings';
 import Login from './pages/Login';
 import DataExport from './pages/DataExport';
 import MobileApp from './pages/MobileApp';
@@ -125,6 +126,7 @@ const AppRoutes = () => {
         <Route path="/users" element={<ProtectedRoute module="UserManagement"><UserManagement /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute module="Settings"><Settings /></ProtectedRoute>} />
         <Route path="/settings/database" element={<ProtectedRoute module="Settings"><DatabaseSettings /></ProtectedRoute>} />
+        <Route path="/settings/sessions" element={<ProtectedRoute module="Settings"><SessionSettings /></ProtectedRoute>} />
         <Route path="/mobile-app" element={<ProtectedRoute><MobileApp /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
