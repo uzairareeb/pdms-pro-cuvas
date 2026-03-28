@@ -298,51 +298,28 @@ const Settings: React.FC = () => {
                       value={localSettings.milestones.coe.enabled}
                       onChange={v => setLocalSettings({...localSettings, milestones: {...localSettings.milestones, coe: {enabled: v}}})} />
                     
-                    {/* Academic Infrastructure Modules */}
-                    <div className="md:col-span-2 xl:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
-                       <div className="p-10 bg-white border border-slate-100 rounded-[40px] flex flex-col justify-between space-y-10 hover:border-indigo-200 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all group relative overflow-hidden shadow-sm">
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -mr-10 -mt-10" />
-                          <div className="flex items-center gap-6 relative z-10">
-                             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-[24px] flex items-center justify-center shadow-inner border border-indigo-100/50">
-                                <Calendar size={30} />
-                             </div>
-                             <div>
-                                <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">Academic Sessions</h4>
-                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2">Horizon Architect & Semester Cycles</p>
-                             </div>
-                          </div>
+                    {/* Academic Infrastructure Module */}
+                    <div className="md:col-span-2 xl:col-span-3 mt-6">
+                       <div className="p-10 bg-white border border-slate-100 rounded-[40px] flex flex-col md:flex-row items-center justify-between gap-10 hover:border-indigo-200 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all group relative overflow-hidden shadow-sm">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none" />
                           
-                          <p className="text-[11px] font-medium text-slate-500 leading-relaxed uppercase tracking-tighter max-w-[320px]">
-                             Provision official institutional timeframes, launch semester cycles, and configure academic commencement protocols.
-                          </p>
-
-                          <button onClick={() => navigate('/settings/sessions')} className="w-full py-5 bg-[#0f172a] text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10 hover:bg-slate-800 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-4 group">
-                             <Layers size={18} className="text-indigo-400 group-hover:rotate-90 transition-transform duration-500" />
-                             <span>Manage Active Horizons</span>
-                             <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
-                          </button>
-                       </div>
-
-                       <div className="p-10 bg-[#0f172a] text-white border border-slate-900 rounded-[40px] flex flex-col justify-between space-y-10 hover:shadow-2xl hover:shadow-slate-900/20 transition-all group relative overflow-hidden shadow-sm">
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
-                          <div className="flex items-center gap-6 relative z-10">
-                             <div className="w-16 h-16 bg-white/10 text-white rounded-[24px] flex items-center justify-center shadow-inner border border-white/5">
-                                <History size={30} />
+                          <div className="flex items-center gap-8 relative z-10 flex-1">
+                             <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[28px] flex items-center justify-center shadow-inner border border-indigo-100/50 shrink-0">
+                                <Calendar size={36} />
                              </div>
                              <div>
-                                <h4 className="text-xl font-black text-white uppercase tracking-tight leading-none">Timeline Management</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2">Protocol Logic & Audit Trace</p>
+                                <h4 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">Academic Sessions</h4>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em] mt-3">Horizon Architect & Semester Cycles</p>
+                                <p className="text-[11px] font-medium text-slate-400 leading-relaxed uppercase tracking-tighter mt-4 max-w-md">
+                                   Provision institutional timeframes, launch semester cycles, and configure archival protocols for academic commencement.
+                                </p>
                              </div>
                           </div>
 
-                          <p className="text-[11px] font-medium text-slate-400 leading-relaxed uppercase tracking-tighter max-w-[320px]">
-                             Configure forensic audit tracking for academic progress, milestone transition logic, and institutional archival policies.
-                          </p>
-
-                          <button className="w-full py-5 bg-white text-slate-900 rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-white/10 hover:bg-slate-100 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-4 group">
-                             <Zap size={18} className="text-indigo-600 animate-pulse" />
-                             <span>Configuration Audit Logs</span>
-                             <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+                          <button onClick={() => navigate('/settings/sessions')} className="w-full md:w-auto px-12 py-6 bg-[#0f172a] text-white rounded-[24px] font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10 hover:bg-slate-800 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-4 group relative z-10 shrink-0">
+                             <Layers size={20} className="text-indigo-400 group-hover:rotate-90 transition-transform duration-500" />
+                             <span>Manage Active Horizons</span>
+                             <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform" />
                           </button>
                        </div>
                     </div>
