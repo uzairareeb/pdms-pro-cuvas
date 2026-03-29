@@ -56,7 +56,7 @@ const PostLoginLoaderGate: React.FC = () => {
             variant="fullscreen"
             message="Preparing your workspace"
             subLabel="Cholistan University of Veterinary and Animal Sciences · PDMS-PRO"
-            logoSize={180}
+            logoSize={360}
           />
         </motion.div>
       )}

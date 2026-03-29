@@ -180,7 +180,7 @@ const Dashboard: React.FC = () => {
   // ─── Guard States ─────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <BrandedLoader variant="fullscreen" message="Loading PostGrad Hub" subLabel="Synchronizing registry data" logoSize={168} />
+      <BrandedLoader variant="fullscreen" message="Loading PostGrad Hub" subLabel="Synchronizing registry data" logoSize={320} />
     );
   }
   if (error) {

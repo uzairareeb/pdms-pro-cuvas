@@ -42,7 +42,7 @@ const Login: React.FC = () => {
         variant="fullscreen"
         message="Initializing secure access"
         subLabel="Cholistan University of Veterinary and Animal Sciences · PostGrad Hub"
-        logoSize={176}
+        logoSize={340}
       />
     );
   }
