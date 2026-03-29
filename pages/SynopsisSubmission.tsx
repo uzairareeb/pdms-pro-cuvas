@@ -325,7 +325,7 @@ const SynopsisSubmission: React.FC = () => {
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] w-12 text-center border-b border-slate-100">#</th>
                 <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Scholar Details</th>
-                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Placement</th>
+                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 min-w-[200px]">Study Programme</th>
                 <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Lead Supervisor</th>
                 <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
                   <div className="flex items-center gap-1.5">
@@ -438,10 +438,7 @@ const SynopsisDesktopRow = ({ index, student, pendingChanges, onStatusChange, on
         </div>
       </td>
       <td className="px-8 py-6">
-        <div className="flex flex-col gap-1.5">
-            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md text-[8px] font-black uppercase tracking-tight w-fit">{student.degree}</span>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[150px]">{student.department}</span>
-         </div>
+         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest truncate max-w-[240px] block">{student.programme}</span>
       </td>
       <td className="px-8 py-6">
          <div className="flex items-center gap-2 text-slate-600">
@@ -521,9 +518,8 @@ const SynopsisMobileCard = ({ student, pendingChanges, onStatusChange, onDateCha
             <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mt-2">{student.regNo || '---'}</p>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
-           <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[7px] font-black uppercase">{student.degree}</span>
-           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{student.department}</span>
+        <div className="flex flex-col items-end">
+           <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">{student.programme}</span>
         </div>
       </div>
 

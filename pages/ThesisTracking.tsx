@@ -332,7 +332,7 @@ const ThesisTracking: React.FC = () => {
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] w-12 text-center border-b border-slate-100">#</th>
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Scholar Details</th>
-                <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 min-w-[200px]">Study Program</th>
+                <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 min-w-[200px]">Study Programme</th>
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-b border-slate-100 w-24">Sem</th>
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 w-64">Thesis Milestone</th>
               </tr>
@@ -437,16 +437,7 @@ const ThesisDesktopRow = ({ index, student, pendingChanges, onStatusChange, onCo
         </div>
       </td>
       <td className="px-8 py-6">
-         <div className="flex flex-col gap-1">
-            <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border w-fit ${
-              normalizeDegree(student.degree) === 'PHD' 
-                ? 'bg-purple-50 text-purple-700 border-purple-200' 
-                : 'bg-blue-50 text-blue-700 border-blue-200'
-            }`}>
-              {student.degree}
-            </span>
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight truncate max-w-[250px]">{student.programme}</p>
-         </div>
+         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest truncate max-w-[240px] block">{student.programme}</span>
       </td>
       <td className="px-8 py-6 text-center">
          <span className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-[10px] font-black tabular-nums mx-auto border border-slate-200">{student.currentSemester}</span>
@@ -509,9 +500,8 @@ const ThesisMobileCard = ({ student, pendingChanges, onStatusChange, onDateChang
             <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mt-2">{student.regNo || '---'}</p>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
-           <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[7px] font-black uppercase">Sem {student.currentSemester}</span>
-           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{student.degree}</span>
+        <div className="flex flex-col items-end">
+           <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">{student.programme}</span>
         </div>
       </div>
 
