@@ -43,8 +43,7 @@ export const generateOfficialPDF = async ({ reportName, headers, data, landscape
     const pageHeight = doc.internal.pageSize.getHeight();
     
     // Load Logos
-    const hecLogo = await getBase64ImageFromUrl('/hec-logo.png');
-    const cuvasLogo = await getBase64ImageFromUrl('/logo.jpg');
+    const cuvasLogo = await getBase64ImageFromUrl('/cuvaslogo.png');
 
     const brandPrimary: [number, number, number] = [15, 23, 42]; // slate-900 
     const brandAccent: [number, number, number] = [79, 70, 229]; // indigo-600
@@ -92,9 +91,8 @@ export const generateOfficialPDF = async ({ reportName, headers, data, landscape
         doc.setFillColor(255, 255, 255);
         doc.rect(0, 0, pageWidth, 55, 'F');
 
-        // Logos
-        if (cuvasLogo) doc.addImage(cuvasLogo, 'JPEG', 14, 10, 24, 24);
-        if (hecLogo) doc.addImage(hecLogo, 'PNG', pageWidth - 38, 10, 24, 24);
+        // Logo
+        if (cuvasLogo) doc.addImage(cuvasLogo, 'PNG', 14, 10, 30, 20);
 
         // Header Text
         doc.setTextColor(brandPrimary[0], brandPrimary[1], brandPrimary[2]);
@@ -165,13 +163,11 @@ export const generateStudentProfilePDF = async (student: Student) => {
     const pageHeight = doc.internal.pageSize.getHeight();
     
     // Load Logos
-    const cuvasLogo = await getBase64ImageFromUrl('/logo.jpg');
-    const hecLogo = await getBase64ImageFromUrl('/hec-logo.png');
+    const cuvasLogo = await getBase64ImageFromUrl('/cuvaslogo.png');
 
     const addMinimalHeader = () => {
       const headerY = 16;
-      if (cuvasLogo) doc.addImage(cuvasLogo, 'JPEG', 14, 10, 20, 20);
-      if (hecLogo) doc.addImage(hecLogo, 'PNG', pageWidth - 34, 10, 20, 20);
+      if (cuvasLogo) doc.addImage(cuvasLogo, 'PNG', 14, 10, 25, 18);
 
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');

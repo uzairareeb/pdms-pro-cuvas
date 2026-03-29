@@ -78,7 +78,7 @@ const FACULTY_DATABASE = [
   "Mr. Rao Basharat Ali", "Dr. Humera Hayat", "Mr. Shafaqat Ali"
 ];
 
-const DEFAULT_LOGO_PATH = '/logo.jpg';
+const DEFAULT_LOGO_PATH = '/cuvaslogo.png';
 
 const DEFAULT_PERMISSIONS: Record<UserRole, Record<string, ModulePermissions>> = {
   Admin: {

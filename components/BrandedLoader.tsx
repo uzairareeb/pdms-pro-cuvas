@@ -69,13 +69,14 @@ const BrandedLoader: React.FC<BrandedLoaderProps> = ({
       >
         <motion.img
           src={CUVAS_LOGO}
-          alt=""
-          width={logoSize}
-          height={logoSize}
-          className="object-contain drop-shadow-lg select-none"
-          style={{ maxWidth: logoSize, maxHeight: logoSize * 1.15 }}
-          animate={{ rotate: [0, 0.6, -0.6, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+          alt="CUVAS Logo"
+          className="w-full h-auto object-contain drop-shadow-2xl select-none"
+          style={{ maxWidth: logoSize, filter: 'drop-shadow(0 20px 30px rgba(79,70,229,0.15))' }}
+          animate={{ 
+            rotate: [0, 0.4, -0.4, 0],
+            y: [0, -4, 0]
+          }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           draggable={false}
         />
         <motion.div
