@@ -41,7 +41,7 @@ const Login: React.FC = () => {
       <BrandedLoader
         variant="fullscreen"
         message="Initializing secure access"
-        subLabel="Higher Education Commission · PostGrad Hub"
+        subLabel="Cholistan University of Veterinary and Animal Sciences · PostGrad Hub"
         logoSize={176}
       />
     );

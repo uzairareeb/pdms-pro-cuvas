@@ -36,7 +36,7 @@ const RouteTransitionOverlay: React.FC = () => {
             <BrandedLoader
               variant="inline"
               message="Loading"
-              subLabel="HEC · DAS"
+              subLabel="CUVAS · PDMS-PRO"
               logoSize={80}
               className="!py-2"
             />

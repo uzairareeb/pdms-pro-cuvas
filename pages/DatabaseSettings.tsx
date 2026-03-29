@@ -308,7 +308,7 @@ const DatabaseSettings: React.FC = () => {
              <div className="space-y-4">
                 <h4 className="text-xl font-black tracking-tight uppercase">Encrypted Persistence</h4>
                 <p className="text-[11px] font-medium text-indigo-100 leading-relaxed uppercase tracking-tighter">
-                   Institutional credentials are never exposed at the edge. Connection tokens are processed via secure server-side proxy routines for HEC compliance.
+                   Institutional credentials are never exposed at the edge. Connection tokens are processed via secure server-side proxy routines for institutional verification.
                 </p>
              </div>
           </div>

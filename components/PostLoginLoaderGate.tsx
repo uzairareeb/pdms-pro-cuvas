@@ -55,7 +55,7 @@ const PostLoginLoaderGate: React.FC = () => {
           <BrandedLoader
             variant="fullscreen"
             message="Preparing your workspace"
-            subLabel="Higher Education Commission · DAS System"
+            subLabel="Cholistan University of Veterinary and Animal Sciences · PDMS-PRO"
             logoSize={180}
           />
         </motion.div>

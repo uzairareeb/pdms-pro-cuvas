@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
-const HEC_LOGO = '/hec-logo.png';
+const CUVAS_LOGO = '/cuvaslogo.png';
 
 function usePrefersDarkScheme(): boolean {
   const [dark, setDark] = useState(false);
@@ -68,7 +68,7 @@ const BrandedLoader: React.FC<BrandedLoaderProps> = ({
         }}
       >
         <motion.img
-          src={HEC_LOGO}
+          src={CUVAS_LOGO}
           alt=""
           width={logoSize}
           height={logoSize}
