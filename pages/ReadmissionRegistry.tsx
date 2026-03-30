@@ -81,8 +81,9 @@ const ReadmissionRegistry: React.FC = () => {
 
   const readmissionCandidates = useMemo(() =>
     students.filter(s =>
-      s.status === StudentStatus.DROPPED ||
-      (s.readmissionStatus && s.readmissionStatus !== 'Approved')
+      !s.isArchived &&
+      (s.status === StudentStatus.DROPPED ||
+      (s.readmissionStatus && s.readmissionStatus !== 'Approved'))
     ), [students]);
 
   const filtered = useMemo(() => {

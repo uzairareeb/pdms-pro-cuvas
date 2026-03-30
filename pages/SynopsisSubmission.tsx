@@ -100,6 +100,7 @@ const SynopsisSubmission: React.FC = () => {
   // ── Data Logic ──────────────────────────────────────────────────────────────
   const eligibleStudents = useMemo(() => {
     return students.filter(s => 
+      !s.isArchived &&
       Number(s.currentSemester) === 3 && 
       s.status !== StudentStatus.COMPLETED && 
       s.status !== StudentStatus.CLOSED && 

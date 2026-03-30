@@ -73,7 +73,8 @@ export interface DashboardMetrics {
   isGenderSumValid:  boolean;
 }
 
-export const computeMetrics = (students: Student[]): DashboardMetrics => {
+export const computeMetrics = (allStudents: Student[]): DashboardMetrics => {
+  const students    = allStudents.filter(s => !s.isArchived);
   const total       = students.length;
   const male        = students.filter(isMale).length;
   const female      = students.filter(isFemale).length;

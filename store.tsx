@@ -41,6 +41,8 @@ interface AppContextType {
   deleteAllStudents: () => void;
   toggleLockStudent: (id: string) => void;
   updateSettings: (settings: SystemSettings) => void;
+  archiveStudent: (id: string, year: string) => Promise<void>;
+  restoreStudent: (id: string) => Promise<void>;
   logAction: (action: string, details: string, module?: string) => void;
   addStaff: (user: Omit<StaffUser, 'id'>) => void;
   updateStaff: (user: StaffUser) => void;
@@ -94,6 +96,7 @@ const DEFAULT_PERMISSIONS: Record<UserRole, Record<string, ModulePermissions>> =
     ReadmissionRegistry: { view: true, create: true, edit: true, delete: true },
     SynopsisSubmission: { view: true, create: true, edit: true, delete: true },
     ThesisTracking: { view: true, create: true, edit: true, delete: true },
+    StudentArchive: { view: true, create: true, edit: true, delete: true },
   },
   Editor: {
     Dashboard: { view: true, create: true, edit: true, delete: false },
@@ -108,6 +111,7 @@ const DEFAULT_PERMISSIONS: Record<UserRole, Record<string, ModulePermissions>> =
     ReadmissionRegistry: { view: true, create: true, edit: true, delete: false },
     SynopsisSubmission: { view: true, create: true, edit: true, delete: false },
     ThesisTracking: { view: true, create: true, edit: true, delete: false },
+    StudentArchive: { view: true, create: true, edit: true, delete: false },
   },
   Viewer: {
     Dashboard: { view: true, create: false, edit: false, delete: false },
@@ -122,6 +126,7 @@ const DEFAULT_PERMISSIONS: Record<UserRole, Record<string, ModulePermissions>> =
     ReadmissionRegistry: { view: true, create: false, edit: false, delete: false },
     SynopsisSubmission: { view: true, create: false, edit: false, delete: false },
     ThesisTracking: { view: true, create: false, edit: false, delete: false },
+    StudentArchive: { view: true, create: false, edit: false, delete: false },
   }
 };
 
@@ -369,6 +374,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...data,
       id: 's' + Math.random().toString(36).substr(2, 5),
       srNo: (students.length + 1).toString().padStart(3, '0'),
+      isArchived: false,
       isLocked: false
     };
 
@@ -396,6 +402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...data,
       id: 's' + Math.random().toString(36).substr(2, 8),
       srNo: (startSr + index).toString().padStart(3, '0'),
+      isArchived: false,
       isLocked: false,
       currentSemester: parseInt(data.currentSemester) || 1
     }));
@@ -649,6 +656,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAction('Settings', 'Institutional configuration updated.', 'Settings');
     notify('System preferences synchronized successfully.', 'success');
   };
+  
+  const archiveStudent = async (id: string, year: string) => {
+    const student = students.find(s => s.id === id);
+    if (!student) return;
+    
+    const updated: Student = { ...student, isArchived: true, graduationYear: year };
+    
+    // Use the generic update flow to ensure cloud sync
+    await updateStudent(updated);
+    logAction('Archives', `Archived Scholar: ${student.name} (Class of ${year})`, 'StudentArchive');
+    notify(`${student.name} has been moved to the historical archive.`, 'success');
+  };
+  
+  const restoreStudent = async (id: string) => {
+    const student = students.find(s => s.id === id);
+    if (!student) return;
+    
+    const updated: Student = { ...student, isArchived: false };
+    
+    await updateStudent(updated);
+    logAction('Archives', `Restored Scholar: ${student.name}`, 'StudentArchive');
+    notify(`${student.name} has been restored to active registry.`, 'success');
+  };
 
   const backupDatabase = () => {
     const data = { students, settings, staff, auditLogs };
@@ -774,6 +804,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateStaffPermissions,
       deleteStaff,
       addSession,
+      archiveStudent,
+      restoreStudent,
       backupDatabase,
       markActionAsReviewed,
       sendReminder,

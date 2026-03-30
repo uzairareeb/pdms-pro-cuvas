@@ -60,6 +60,8 @@ export interface Student {
   readmissionStatus?: 'Pending' | 'Approved' | 'Rejected';
   readmissionDate?: string;
   
+  graduationYear?: string;
+  isArchived: boolean;
   isLocked: boolean;
 }
 
