@@ -73,8 +73,7 @@ const InfoRow = ({ label, value }: { label: string; value?: string }) => (
 const StudentRecords: React.FC = () => {
   const {
     students, deleteStudent, bulkDeleteStudents, deleteAllStudents,
-    toggleLockStudent, currentRole, departments, settings, isDatabaseConnected,
-    archiveStudent
+    toggleLockStudent, currentRole, departments, settings, isDatabaseConnected
   } = useStore();
 
   const [searchTerm,       setSearchTerm]       = useState('');
@@ -88,8 +87,6 @@ const StudentRecords: React.FC = () => {
   const [currentPage,      setCurrentPage]      = useState(1);
   const [deletingId,       setDeletingId]       = useState<string | null>(null);
   const [previewStudent,   setPreviewStudent]   = useState<Student | null>(null);
-  const [archivingId,      setArchivingId]      = useState<string | null>(null);
-  const [archiveYear,      setArchiveYear]      = useState<string>(new Date().getFullYear().toString());
 
   const itemsPerPage = 15;
 
@@ -137,12 +134,7 @@ const StudentRecords: React.FC = () => {
     } catch (err) { console.error('Deletion failed:', err); }
   };
 
-  const handleArchive = async () => {
-    if (archivingId && archiveYear) {
-      await archiveStudent(archivingId, archiveYear);
-      setArchivingId(null);
-    }
-  };
+
 
   return (
     <motion.div
@@ -284,12 +276,7 @@ const StudentRecords: React.FC = () => {
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[9px] font-bold text-slate-500 truncate">{student.degree} · {student.programme}</span>
                 <div className="flex items-center gap-1.5">
-                  {currentRole?.StudentArchive?.create && student.status === StudentStatus.COMPLETED && (
-                    <button onClick={e => { e.stopPropagation(); setArchivingId(student.id); }}
-                      className="p-1 px-2 rounded-lg text-teal-600 bg-teal-50 border border-teal-200 hover:bg-teal-600 hover:text-white transition-all flex items-center gap-1" title="Archive">
-                      <Archive size={12} /> <span className="text-[10px] uppercase font-black tracking-widest leading-none">Archive</span>
-                    </button>
-                  )}
+
                   <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wide border ${getStatusStyle(student.status)}`}>
                     {student.status}
                   </span>
@@ -393,12 +380,7 @@ const StudentRecords: React.FC = () => {
                           className="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all" title="View Profile">
                           <Eye size={16} />
                         </Link>
-                        {currentRole?.StudentArchive?.create && student.status === StudentStatus.COMPLETED && (
-                          <button onClick={e => { e.stopPropagation(); setArchivingId(student.id); }}
-                            className="p-2 rounded-xl text-teal-600 bg-teal-50 hover:bg-teal-600 hover:text-white transition-all" title="Archive Student">
-                            <Archive size={16} />
-                          </button>
-                        )}
+
                         {currentRole?.StudentRecords?.edit && (
                           <button onClick={e => handleToggleLock(e, student.id)}
                             className={`p-2 rounded-xl transition-all ${student.isLocked ? 'bg-amber-50 text-amber-600' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}
@@ -594,48 +576,7 @@ const StudentRecords: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Archive Confirmation Modal ────────────────────────────────────────── */}
-      <AnimatePresence>
-        {archivingId && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 no-print">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setArchivingId(null)} />
-            <motion.div
-              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
-              className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden"
-            >
-              <div className="h-1.5 bg-teal-500" />
-              <div className="p-8 text-center space-y-5">
-                <div className="w-16 h-16 bg-teal-50 text-teal-500 rounded-2xl flex items-center justify-center mx-auto">
-                  <Archive size={30} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Archive Scholar?</h3>
-                  <p className="text-sm text-slate-500 font-medium leading-relaxed mt-2">
-                    Please explicitly state the graduation/completion year for historical record tracking.
-                  </p>
-                </div>
-                <div className="text-left mt-4">
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Graduation Year</label>
-                  <input type="number" value={archiveYear} onChange={(e) => setArchiveYear(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none font-bold"
-                  />
-                </div>
-              </div>
-              <div className="px-8 pb-8 flex gap-3">
-                <button onClick={() => setArchivingId(null)}
-                  className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all">
-                  Cancel
-                </button>
-                <button onClick={handleArchive} disabled={!archiveYear}
-                  className="flex-1 py-3 bg-teal-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-teal-500 transition-all shadow-sm disabled:opacity-50">
-                  Confirm
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+
 
     </motion.div>
   );
