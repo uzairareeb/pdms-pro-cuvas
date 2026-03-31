@@ -509,44 +509,79 @@ async function startServer() {
     }
   });
 
-  // Student Portal - File Upload (JSON/Base64 approach as Multer not in package.json)
-  app.post("/api/upload-thesis", async (req, res) => {
-    const { studentId, cnic, fileData } = req.body;
+  // ── Student Portal: Supabase Storage Upload ──────────────────────────────
+  app.post("/api/student/upload-thesis", async (req, res) => {
+    const { cnic, fileData } = req.body;
     try {
-      if (!cnic || !fileData) {
-        throw new Error("CNIC and fileData are required");
-      }
-      
+      if (!cnic || !fileData) throw new Error("CNIC and fileData are required");
+
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
-      const uploadDir = path.join(process.cwd(), 'uploads', 'thesis');
-      
-      if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
+      const supabase = getSupabaseClient();
+
+      // Pre-check: does file already exist in bucket?
+      const { data: existing } = await supabase.storage
+        .from('thesis-files')
+        .list('', { search: `${normalizedCnic}.pdf` });
+
+      if (existing && existing.length > 0) {
+        return res.json({ success: false, alreadyUploaded: true, message: "Your thesis has already been submitted." });
       }
-      
-      const filePath = path.join(uploadDir, `${normalizedCnic}.pdf`);
-      
-      // Assume fileData is base64 string
+
+      // Decode base64
       const base64Data = fileData.split(';base64,').pop();
-      fs.writeFileSync(filePath, base64Data, { encoding: 'base64' });
-      
-      return res.json({ success: true, message: "Thesis uploaded locally successfully!" });
+      if (!base64Data) throw new Error("Invalid file data");
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('thesis-files')
+        .upload(`${normalizedCnic}.pdf`, buffer, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
+
+      if (error) throw new Error(error.message);
+
+      const { data: urlData } = supabase.storage
+        .from('thesis-files')
+        .getPublicUrl(`${normalizedCnic}.pdf`);
+
+      return res.json({
+        success: true,
+        message: "Thesis uploaded successfully!",
+        filePath: data.path,
+        publicUrl: urlData.publicUrl
+      });
     } catch (error: any) {
-      console.error("Upload error:", error);
+      console.error("Thesis upload error:", error);
       return res.status(400).json({ success: false, message: error.message });
     }
   });
 
-  app.get("/api/check-thesis-status/:cnic", (req, res) => {
+  app.get("/api/student/check-upload/:cnic", async (req, res) => {
     const { cnic } = req.params;
     try {
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
-      const filePath = path.join(process.cwd(), 'uploads', 'thesis', `${normalizedCnic}.pdf`);
-      
-      const exists = fs.existsSync(filePath);
-      return res.json({ success: true, exists, filePath: exists ? `/uploads/thesis/${normalizedCnic}.pdf` : null });
+      const supabase = getSupabaseClient();
+
+      const { data, error } = await supabase.storage
+        .from('thesis-files')
+        .list('', { search: `${normalizedCnic}.pdf` });
+
+      if (error) throw new Error(error.message);
+
+      const exists = !!(data && data.length > 0);
+      let publicUrl = null;
+      if (exists) {
+        const { data: urlData } = supabase.storage
+          .from('thesis-files')
+          .getPublicUrl(`${normalizedCnic}.pdf`);
+        publicUrl = urlData.publicUrl;
+      }
+
+      return res.json({ success: true, exists, publicUrl });
     } catch (error: any) {
-      return res.status(400).json({ success: false, message: error.message });
+      return res.json({ success: true, exists: false, publicUrl: null });
     }
   });
 
