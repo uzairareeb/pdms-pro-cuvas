@@ -81,6 +81,9 @@ const StudentLogin: React.FC = () => {
       return;
     }
 
+    // NEW: Save student state for dashboard
+    localStorage.setItem('cas_student_user', JSON.stringify(student));
+    
     navigate('/student-portal');
   };
 

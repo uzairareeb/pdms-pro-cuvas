@@ -509,6 +509,47 @@ async function startServer() {
     }
   });
 
+  // Student Portal - File Upload (JSON/Base64 approach as Multer not in package.json)
+  app.post("/api/upload-thesis", async (req, res) => {
+    const { studentId, cnic, fileData } = req.body;
+    try {
+      if (!cnic || !fileData) {
+        throw new Error("CNIC and fileData are required");
+      }
+      
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      const uploadDir = path.join(process.cwd(), 'uploads', 'thesis');
+      
+      if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      const filePath = path.join(uploadDir, `${normalizedCnic}.pdf`);
+      
+      // Assume fileData is base64 string
+      const base64Data = fileData.split(';base64,').pop();
+      fs.writeFileSync(filePath, base64Data, { encoding: 'base64' });
+      
+      return res.json({ success: true, message: "Thesis uploaded locally successfully!" });
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.get("/api/check-thesis-status/:cnic", (req, res) => {
+    const { cnic } = req.params;
+    try {
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      const filePath = path.join(process.cwd(), 'uploads', 'thesis', `${normalizedCnic}.pdf`);
+      
+      const exists = fs.existsSync(filePath);
+      return res.json({ success: true, exists, filePath: exists ? `/uploads/thesis/${normalizedCnic}.pdf` : null });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
   // Vite middleware for development (local only)
   if (!isVercel && process.env.NODE_ENV !== "production") {
     try {
@@ -525,6 +566,9 @@ async function startServer() {
     }
   } else if (!isVercel) {
     const distPath = path.join(process.cwd(), 'dist');
+    const uploadsPath = path.join(process.cwd(), 'uploads');
+    
+    app.use('/uploads', express.static(uploadsPath));
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
