@@ -22,21 +22,31 @@ async function startServer() {
     } catch (e) {
       console.error("Error reading config file:", e);
     }
-    
-    // Fallback to environment variables
     return {
       url: process.env.SUPABASE_URL || '',
-      key: process.env.SUPABASE_ANON_KEY || ''
+      key: process.env.SUPABASE_ANON_KEY || '',
+      serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     };
   };
 
+  // Anon client – used for normal reads
   const getSupabaseClient = () => {
     const config = getStoredConfig();
     if (!config.url || !config.key) {
       throw new Error("Supabase configuration missing. Please set URL and Key in Database Settings.");
     }
-    const keyToUse = process.env.SUPABASE_SERVICE_ROLE_KEY || config.key;
-    return createClient(config.url, keyToUse);
+    return createClient(config.url, config.key);
+  };
+
+  // Service-role client – bypasses RLS; used ONLY for student portal writes
+  const getServiceClient = () => {
+    const config = getStoredConfig();
+    if (!config.url) throw new Error("Supabase URL missing.");
+    // Prefer explicit service role key; fall back to anon (still works if bucket policy allows it)
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      || config.serviceKey
+      || config.key;
+    return createClient(config.url, serviceKey);
   };
 
   // API routes
@@ -525,7 +535,8 @@ async function startServer() {
       if (!cnic || !fileData) throw new Error("CNIC and fileData are required");
 
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
-      const supabase = getSupabaseClient();
+      // Use service client to bypass Storage RLS
+      const supabase = getServiceClient();
 
       // Pre-check: does file already exist in bucket?
       const { data: existing } = await supabase.storage
@@ -533,7 +544,10 @@ async function startServer() {
         .list('', { search: `${normalizedCnic}.pdf` });
 
       if (existing && existing.length > 0) {
-        return res.json({ success: false, alreadyUploaded: true, message: "Your thesis has already been submitted." });
+        const { data: urlData } = supabase.storage
+          .from('thesis-files')
+          .getPublicUrl(`${normalizedCnic}.pdf`);
+        return res.json({ success: false, alreadyUploaded: true, message: "Your thesis has already been submitted.", publicUrl: urlData.publicUrl });
       }
 
       // Decode base64
@@ -541,7 +555,7 @@ async function startServer() {
       if (!base64Data) throw new Error("Invalid file data");
       const buffer = Buffer.from(base64Data, 'base64');
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage (service role bypasses bucket RLS)
       const { data, error } = await supabase.storage
         .from('thesis-files')
         .upload(`${normalizedCnic}.pdf`, buffer, {
@@ -571,7 +585,8 @@ async function startServer() {
     const { cnic } = req.params;
     try {
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
-      const supabase = getSupabaseClient();
+      // Service client needed to list private bucket files
+      const supabase = getServiceClient();
 
       const { data, error } = await supabase.storage
         .from('thesis-files')
@@ -599,7 +614,8 @@ async function startServer() {
     try {
       if (!cnic || !filePath) throw new Error("CNIC and filePath are required");
 
-      const supabase = getSupabaseClient(); // Uses service role key if available
+      // Service client required to update students table bypassing RLS
+      const supabase = getServiceClient();
 
       let query = supabase.from('students').update({
         file_path: filePath,
@@ -609,7 +625,7 @@ async function startServer() {
       if (studentId) {
         query = query.eq('id', studentId);
       } else {
-        query = query.eq('cnic', cnic); 
+        query = query.eq('cnic', cnic);
       }
 
       const { error } = await query;
@@ -618,6 +634,20 @@ async function startServer() {
       return res.json({ success: true, message: "Thesis finalized successfully!" });
     } catch (error: any) {
       console.error("Finalize error:", error);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // ── Save Service Role Key (for admin settings page) ───────────────────────
+  app.post("/api/supabase/service-key", async (req, res) => {
+    const { serviceKey } = req.body;
+    try {
+      if (!serviceKey) throw new Error("serviceKey is required");
+      const config = getStoredConfig();
+      const updatedConfig = { ...config, serviceKey };
+      fs.writeFileSync(CONFIG_PATH, JSON.stringify(updatedConfig, null, 2));
+      return res.json({ success: true, message: "Service role key saved." });
+    } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }
   });
