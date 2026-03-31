@@ -20,7 +20,9 @@ import {
   ChevronRight,
   Eye,
   X,
-  Printer
+  Printer,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { Student, StudentStatus } from '../types';
 import { jsPDF } from 'jspdf';
@@ -336,6 +338,7 @@ const ThesisTracking: React.FC = () => {
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 min-w-[200px]">Study Programme</th>
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-b border-slate-100 w-24">Sem</th>
                 <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100 w-64">Thesis Milestone</th>
+                <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-b border-slate-100 w-32">Thesis PDF</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -475,6 +478,31 @@ const ThesisDesktopRow = ({ index, student, pendingChanges, onStatusChange, onCo
            )}
          </div>
       </td>
+      <td className="px-8 py-6 text-center">
+        {student.publicUrl ? (
+          <button
+            onClick={() => {
+              const fileName = `${student.regNo || 'Unknown'}_${student.programme || 'Thesis'}.pdf`;
+              const link = document.createElement('a');
+              link.href = student.publicUrl || '';
+              link.setAttribute('download', fileName);
+              link.target = "_blank"; // Fallback for some browsers
+              link.click();
+            }}
+            className="group/dl flex items-center justify-center w-11 h-11 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm active:scale-95 mx-auto"
+            title="Download Scholar Thesis PDF"
+          >
+            <Download size={18} className="group-hover/dl:scale-110 transition-transform" />
+          </button>
+        ) : (
+          <div 
+            className="flex items-center justify-center w-11 h-11 bg-slate-50 text-slate-300 border border-slate-100 rounded-xl mx-auto cursor-not-allowed"
+            title="Thesis not uploaded yet"
+          >
+            <Download size={18} />
+          </div>
+        )}
+      </td>
     </tr>
   );
 };
@@ -553,9 +581,34 @@ const ThesisMobileCard = ({ student, pendingChanges, onStatusChange, onDateChang
           <Save size={16} />
           <span>Update Registry Node</span>
         </button>
-        <Link to={`/students/${student.id}`} className="p-4 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-all border border-slate-100">
-           <Eye size={18} />
-        </Link>
+        <div className="flex gap-2">
+          {student.publicUrl ? (
+            <button
+              onClick={() => {
+                const fileName = `${student.regNo || 'Unknown'}_${student.programme || 'Thesis'}.pdf`;
+                const link = document.createElement('a');
+                link.href = student.publicUrl || '';
+                link.setAttribute('download', fileName);
+                link.target = "_blank";
+                link.click();
+              }}
+              className="p-4 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
+              title="Download Scholar Thesis PDF"
+            >
+              <Download size={18} />
+            </button>
+          ) : (
+            <div 
+              className="p-4 bg-slate-50 text-slate-300 rounded-xl border border-slate-100 cursor-not-allowed"
+              title="Thesis not uploaded yet"
+            >
+              <Download size={18} />
+            </div>
+          )}
+          <Link to={`/students/${student.id}`} className="p-4 bg-indigo-50 text-indigo-500 rounded-xl hover:bg-indigo-600 hover:text-white transition-all border border-indigo-100">
+             <Eye size={18} />
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -65,6 +65,8 @@ export interface Student {
   isLocked: boolean;
   filePath?: string;
   isUploaded?: boolean;
+  publicUrl?: string | null;
+  submissionDate?: string | null;
 }
 
 export type UserRole = 'Admin' | 'Editor' | 'Viewer';

@@ -178,50 +178,76 @@ async function startServer() {
   app.get("/api/supabase/students", async (req, res) => {
     try {
       const supabase = getSupabaseClient();
-      const { data, error } = await supabase.from('students').select('*').order('sr_no', { ascending: true });
-      if (error) throw error;
+      const serviceClient = getServiceClient();
+
+      // Parallel fetch students and their submissions
+      const [studentsRes, submissionsRes] = await Promise.all([
+        supabase.from('students').select('*').order('sr_no', { ascending: true }),
+        serviceClient.from('thesis_submissions').select('*')
+      ]);
+
+      if (studentsRes.error) throw studentsRes.error;
+
+      // Hash submissions by normalized CNIC for O(1) lookup
+      const submissionMap: Record<string, any> = {};
+      if (submissionsRes.data) {
+        submissionsRes.data.forEach((sub: any) => {
+          submissionMap[sub.student_cnic] = sub;
+        });
+      }
       
-      // Map snake_case to camelCase if needed, but let's assume we use the same keys for simplicity
-      // or map them if the user's table uses snake_case.
-      // Based on the SQL provided earlier, it seems they might use snake_case.
-      // Let's map them to match the Student interface.
-      const mappedData = data.map((s: any) => ({
-        id: s.id,
-        srNo: s.sr_no,
-        cnic: s.cnic,
-        name: s.name,
-        fatherName: s.father_name,
-        regNo: s.reg_no,
-        gender: s.gender,
-        contactNumber: s.contact_number,
-        degree: s.degree,
-        session: s.session,
-        department: s.department,
-        programme: s.programme,
-        currentSemester: s.current_semester,
-        status: s.status,
-        supervisorName: s.supervisor_name,
-        coSupervisor: s.co_supervisor,
-        member1: s.member1,
-        member2: s.member2,
-        thesisId: s.thesis_id,
-        synopsis: s.synopsis,
-        synopsisSubmissionDate: s.synopsis_submission_date,
-        gs2CourseWork: s.gs2_course_work,
-        gs4Form: s.gs4_form,
-        semiFinalThesisStatus: s.semi_final_thesis_status,
-        semiFinalThesisSubmissionDate: s.semi_final_thesis_submission_date,
-        finalThesisStatus: s.final_thesis_status,
-        finalThesisSubmissionDate: s.final_thesis_submission_date,
-        thesisSentToCOE: s.thesis_sent_to_coe,
-        coeSubmissionDate: s.coe_submission_date,
-        validationStatus: s.validation_status,
-        validationDate: s.validation_date,
-        comments: s.comments,
-        isLocked: s.is_locked,
-        filePath: s.file_path,
-        isUploaded: s.is_uploaded
-      }));
+      const mappedData = studentsRes.data.map((s: any) => {
+        const normalizedCnic = (s.cnic || '').replace(/[-\s]/g, '').trim();
+        const sub = submissionMap[normalizedCnic];
+        
+        let publicUrl = null;
+        if (sub?.file_path) {
+          const { data } = serviceClient.storage
+            .from('thesis-files')
+            .getPublicUrl(sub.file_path.split('/').pop() || '');
+          publicUrl = data.publicUrl;
+        }
+        
+        return {
+          id: s.id,
+          srNo: s.sr_no,
+          cnic: s.cnic,
+          name: s.name,
+          fatherName: s.father_name,
+          regNo: s.reg_no,
+          gender: s.gender,
+          contactNumber: s.contact_number,
+          degree: s.degree,
+          session: s.session,
+          department: s.department,
+          programme: s.programme,
+          currentSemester: s.current_semester,
+          status: s.status,
+          supervisorName: s.supervisor_name,
+          coSupervisor: s.co_supervisor,
+          member1: s.member1,
+          member2: s.member2,
+          thesisId: s.thesis_id,
+          synopsis: s.synopsis,
+          synopsisSubmissionDate: s.synopsis_submission_date,
+          gs2CourseWork: s.gs2_course_work,
+          gs4Form: s.gs4_form,
+          semiFinalThesisStatus: s.semi_final_thesis_status,
+          semiFinalThesisSubmissionDate: s.semi_final_thesis_submission_date,
+          finalThesisStatus: s.final_thesis_status,
+          finalThesisSubmissionDate: s.final_thesis_submission_date,
+          thesisSentToCOE: s.thesis_sent_to_coe,
+          coeSubmissionDate: s.coe_submission_date,
+          validationStatus: s.validation_status,
+          validationDate: s.validation_date,
+          comments: s.comments,
+          isLocked: s.is_locked,
+          filePath: sub?.file_path || null,
+          isUploaded: sub?.is_uploaded || false,
+          submissionDate: sub?.uploaded_at || null,
+          publicUrl: publicUrl
+        };
+      });
 
       return res.json({ success: true, data: mappedData });
     } catch (error: any) {
