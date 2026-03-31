@@ -35,7 +35,8 @@ async function startServer() {
     if (!config.url || !config.key) {
       throw new Error("Supabase configuration missing. Please set URL and Key in Database Settings.");
     }
-    return createClient(config.url, config.key);
+    const keyToUse = process.env.SUPABASE_SERVICE_ROLE_KEY || config.key;
+    return createClient(config.url, keyToUse);
   };
 
   // API routes
@@ -207,7 +208,9 @@ async function startServer() {
         validationStatus: s.validation_status,
         validationDate: s.validation_date,
         comments: s.comments,
-        isLocked: s.is_locked
+        isLocked: s.is_locked,
+        filePath: s.file_path,
+        isUploaded: s.is_uploaded
       }));
 
       return res.json({ success: true, data: mappedData });
@@ -253,7 +256,9 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
-        is_locked: student.isLocked
+        is_locked: student.isLocked,
+        file_path: student.filePath,
+        is_uploaded: student.isUploaded
       }]);
       if (error) throw error;
       return res.json({ success: true });
@@ -299,7 +304,9 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
-        is_locked: student.isLocked
+        is_locked: student.isLocked,
+        file_path: student.filePath,
+        is_uploaded: student.isUploaded
       }));
       const { error } = await supabase.from('students').insert(rows);
       if (error) throw error;
@@ -345,7 +352,9 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
-        is_locked: student.isLocked
+        is_locked: student.isLocked,
+        file_path: student.filePath,
+        is_uploaded: student.isUploaded
       }).eq('id', student.id);
       if (error) throw error;
       return res.json({ success: true });
@@ -582,6 +591,34 @@ async function startServer() {
       return res.json({ success: true, exists, publicUrl });
     } catch (error: any) {
       return res.json({ success: true, exists: false, publicUrl: null });
+    }
+  });
+
+  app.post("/api/student/finalize-thesis-submission", async (req, res) => {
+    const { studentId, cnic, filePath } = req.body;
+    try {
+      if (!cnic || !filePath) throw new Error("CNIC and filePath are required");
+
+      const supabase = getSupabaseClient(); // Uses service role key if available
+
+      let query = supabase.from('students').update({
+        file_path: filePath,
+        is_uploaded: true
+      });
+
+      if (studentId) {
+        query = query.eq('id', studentId);
+      } else {
+        query = query.eq('cnic', cnic); 
+      }
+
+      const { error } = await query;
+      if (error) throw new Error(error.message);
+
+      return res.json({ success: true, message: "Thesis finalized successfully!" });
+    } catch (error: any) {
+      console.error("Finalize error:", error);
+      return res.status(400).json({ success: false, message: error.message });
     }
   });
 

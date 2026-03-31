@@ -63,6 +63,8 @@ export interface Student {
   graduationYear?: string;
   isArchived: boolean;
   isLocked: boolean;
+  filePath?: string;
+  isUploaded?: boolean;
 }
 
 export type UserRole = 'Admin' | 'Editor' | 'Viewer';
