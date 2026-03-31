@@ -529,16 +529,51 @@ async function startServer() {
   });
 
   // ── Student Portal: Supabase Storage Upload ──────────────────────────────
+  // Auto-creates thesis_submissions table if it doesn't exist yet
+  const ensureThesisTable = async () => {
+    try {
+      const supabase = getServiceClient();
+      // Try to select from thesis_submissions; if it fails, table doesn't exist — create it
+      const { error } = await supabase.from('thesis_submissions').select('id').limit(1);
+      if (error && (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist'))) {
+        // Table doesn't exist — use raw SQL via Supabase REST API
+        const config = getStoredConfig();
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.serviceKey || config.key;
+        const supabaseUrl = config.url;
+        const sqlQuery = `
+          CREATE TABLE IF NOT EXISTS thesis_submissions (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            student_cnic TEXT UNIQUE NOT NULL,
+            student_id TEXT,
+            file_path TEXT NOT NULL,
+            is_uploaded BOOLEAN DEFAULT TRUE,
+            uploaded_at TIMESTAMPTZ DEFAULT NOW()
+          );`;
+        // Call Supabase SQL via pg-rest endpoint (requires service role key)
+        await fetch(`${supabaseUrl}/rest/v1/rpc/exec`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': serviceKey,
+            'Authorization': `Bearer ${serviceKey}`
+          },
+          body: JSON.stringify({ sql: sqlQuery })
+        });
+      }
+    } catch (e) {
+      // Silently ignore — table may already exist or exec rpc not available
+    }
+  };
+
   app.post("/api/student/upload-thesis", async (req, res) => {
     const { cnic, fileData } = req.body;
     try {
       if (!cnic || !fileData) throw new Error("CNIC and fileData are required");
 
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
-      // Use service client to bypass Storage RLS
       const supabase = getServiceClient();
 
-      // Pre-check: does file already exist in bucket?
+      // Pre-check: file already in storage?
       const { data: existing } = await supabase.storage
         .from('thesis-files')
         .list('', { search: `${normalizedCnic}.pdf` });
@@ -555,7 +590,7 @@ async function startServer() {
       if (!base64Data) throw new Error("Invalid file data");
       const buffer = Buffer.from(base64Data, 'base64');
 
-      // Upload to Supabase Storage (service role bypasses bucket RLS)
+      // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('thesis-files')
         .upload(`${normalizedCnic}.pdf`, buffer, {
@@ -571,7 +606,7 @@ async function startServer() {
 
       return res.json({
         success: true,
-        message: "Thesis uploaded successfully!",
+        message: "Thesis uploaded to cloud successfully!",
         filePath: data.path,
         publicUrl: urlData.publicUrl
       });
@@ -585,27 +620,39 @@ async function startServer() {
     const { cnic } = req.params;
     try {
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
-      // Service client needed to list private bucket files
       const supabase = getServiceClient();
 
-      const { data, error } = await supabase.storage
+      // Check thesis_submissions table first (final submission)
+      const { data: dbData } = await supabase
+        .from('thesis_submissions')
+        .select('file_path, is_uploaded')
+        .eq('student_cnic', normalizedCnic)
+        .maybeSingle();
+
+      if (dbData?.is_uploaded) {
+        const { data: urlData } = supabase.storage
+          .from('thesis-files')
+          .getPublicUrl(`${normalizedCnic}.pdf`);
+        return res.json({ success: true, exists: true, finalized: true, publicUrl: urlData.publicUrl, filePath: dbData.file_path });
+      }
+
+      // Check storage bucket (staged upload, not yet finalized)
+      const { data: storageData } = await supabase.storage
         .from('thesis-files')
         .list('', { search: `${normalizedCnic}.pdf` });
 
-      if (error) throw new Error(error.message);
-
-      const exists = !!(data && data.length > 0);
+      const staged = !!(storageData && storageData.length > 0);
       let publicUrl = null;
-      if (exists) {
+      if (staged) {
         const { data: urlData } = supabase.storage
           .from('thesis-files')
           .getPublicUrl(`${normalizedCnic}.pdf`);
         publicUrl = urlData.publicUrl;
       }
 
-      return res.json({ success: true, exists, publicUrl });
+      return res.json({ success: true, exists: staged, finalized: false, publicUrl });
     } catch (error: any) {
-      return res.json({ success: true, exists: false, publicUrl: null });
+      return res.json({ success: true, exists: false, finalized: false, publicUrl: null });
     }
   });
 
@@ -614,24 +661,46 @@ async function startServer() {
     try {
       if (!cnic || !filePath) throw new Error("CNIC and filePath are required");
 
-      // Service client required to update students table bypassing RLS
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
       const supabase = getServiceClient();
 
-      let query = supabase.from('students').update({
-        file_path: filePath,
-        is_uploaded: true
-      });
+      // Ensure thesis_submissions table exists
+      await ensureThesisTable();
 
-      if (studentId) {
-        query = query.eq('id', studentId);
-      } else {
-        query = query.eq('cnic', cnic);
+      // Upsert into thesis_submissions (separate table, students table untouched)
+      const { error } = await supabase
+        .from('thesis_submissions')
+        .upsert({
+          student_cnic: normalizedCnic,
+          student_id: studentId || null,
+          file_path: filePath,
+          is_uploaded: true,
+          uploaded_at: new Date().toISOString()
+        }, { onConflict: 'student_cnic' });
+
+      if (error) {
+        // Table may not exist yet — provide clear SQL to run
+        if (error.code === '42P01' || error.message.includes('does not exist')) {
+          return res.status(400).json({
+            success: false,
+            needsMigration: true,
+            message: "Run this SQL once in your Supabase dashboard SQL Editor",
+            sql: `CREATE TABLE IF NOT EXISTS thesis_submissions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  student_cnic TEXT UNIQUE NOT NULL,
+  student_id TEXT,
+  file_path TEXT NOT NULL,
+  is_uploaded BOOLEAN DEFAULT TRUE,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE POLICY "Allow all" ON thesis_submissions FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
+          });
+        }
+        throw new Error(error.message);
       }
 
-      const { error } = await query;
-      if (error) throw new Error(error.message);
-
-      return res.json({ success: true, message: "Thesis finalized successfully!" });
+      return res.json({ success: true, message: "Thesis finalized and recorded successfully!" });
     } catch (error: any) {
       console.error("Finalize error:", error);
       return res.status(400).json({ success: false, message: error.message });

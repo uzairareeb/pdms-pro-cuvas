@@ -118,15 +118,18 @@ const StudentPortal: React.FC = () => {
         return;
       }
       
-      // Fallback check in case storage was uploaded but DB failed
       const cnicBytes = st.cnic.replace(/[-\s]/g, '').trim();
       const res = await fetch(`/api/student/check-upload/${cnicBytes}`);
       const data = await res.json();
-      if (data.exists && data.publicUrl) {
-         // They uploaded it but DB isn't synced yet, show staged
-         setUploadedFilePath(`thesis-files/${cnicBytes}.pdf`);
-         setPublicUrl(data.publicUrl);
-         setStep('staged');
+      if (data.finalized) {
+        // Final submission recorded in DB
+        setStep('completed');
+        setPublicUrl(data.publicUrl || null);
+      } else if (data.exists) {
+        // Uploaded to storage but not yet finalized — show staged state
+        setUploadedFilePath(`thesis-files/${cnicBytes}.pdf`);
+        setPublicUrl(data.publicUrl);
+        setStep('staged');
       }
     } catch {
       // ignore
@@ -251,13 +254,15 @@ const StudentPortal: React.FC = () => {
 
       const data = await res.json();
       if (data.success) {
-        // Update Local State & Storage
         const updatedStudent = { ...student, isUploaded: true, filePath: uploadedFilePath };
         setStudent(updatedStudent);
         localStorage.setItem('cas_student_user', JSON.stringify(updatedStudent));
-        
-        // Move to Completed state
         setStep('completed');
+      } else if (data.needsMigration) {
+        // Table doesn't exist yet — show the SQL to the admin
+        setError(
+          `⚠️ One-time setup required in Supabase SQL Editor:\n\n${data.sql}\n\nRun this SQL once, then try again.`
+        );
       } else {
         throw new Error(data.message || 'Permission error, contact admin');
       }
