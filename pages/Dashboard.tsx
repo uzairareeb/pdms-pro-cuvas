@@ -6,7 +6,7 @@ import {
   Target, BarChart3, CheckCircle, LogOut, PauseCircle,
   AlertCircle, Layers, Zap, Users, ChevronRight,
   ShieldAlert, GraduationCap, BookOpen, FileCheck,
-  UserX, TrendingUp, Building2, ClipboardList, Clock
+  UserX, TrendingUp, Building2, ClipboardList, Clock, User
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -540,6 +540,7 @@ const Dashboard: React.FC = () => {
               {currentRole?.canViewAudit && <QuickBtn icon={History}   label="Audit Trail"       path="/audit"        navigate={navigate} />}
               <QuickBtn icon={BookOpen}      label="Synopsis"          path="/synopsis-submission" navigate={navigate} />
               <QuickBtn icon={ClipboardList} label="Thesis Tracking"  path="/thesis-tracking" navigate={navigate} />
+              <QuickBtn icon={User}          label="Open Student Portal" path="/student-login" navigate={navigate} />
             </div>
           </div>
 

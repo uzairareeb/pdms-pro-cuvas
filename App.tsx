@@ -16,6 +16,8 @@ import Settings from './pages/Settings';
 import DatabaseSettings from './pages/DatabaseSettings';
 import SessionSettings from './pages/SessionSettings';
 import Login from './pages/Login';
+import StudentLogin from './pages/StudentLogin';
+import StudentPortal from './pages/StudentPortal';
 import DataExport from './pages/DataExport';
 import MobileApp from './pages/MobileApp';
 import SynopsisSubmission from './pages/SynopsisSubmission';
@@ -113,6 +115,8 @@ const AppRoutes = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route path="/login" element={<Login />} />
+        <Route path="/student-login" element={<StudentLogin />} />
+        <Route path="/student-portal" element={<StudentPortal />} />
         <Route path="/" element={<ProtectedRoute module="Dashboard"><Dashboard /></ProtectedRoute>} />
         <Route path="/registration" element={<ProtectedRoute module="StudentRegistration" action="create"><StudentRegistration /></ProtectedRoute>} />
         <Route path="/records" element={<ProtectedRoute module="StudentRecords"><StudentRecords /></ProtectedRoute>} />
