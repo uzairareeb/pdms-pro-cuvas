@@ -86,11 +86,11 @@ const SectionHeader: React.FC<{ icon: any; title: string; subtitle: string }> = 
 );
 
 // ─── Quick Action Button ──────────────────────────────────────────────────────
-const QuickBtn: React.FC<{ icon: any; label: string; path: string; navigate: (p: string) => void; color?: string }> = ({
-  icon: Icon, label, path, navigate, color = 'text-indigo-600'
+const QuickBtn: React.FC<{ icon: any; label: string; path: string; navigate: (p: string) => void; color?: string; newTab?: boolean }> = ({
+  icon: Icon, label, path, navigate, color = 'text-indigo-600', newTab = false
 }) => (
   <button
-    onClick={() => navigate(path)}
+    onClick={() => newTab ? window.open(`#${path}`, '_blank', 'noopener,noreferrer') : navigate(path)}
     className="flex items-center gap-3 p-4 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 rounded-xl border border-slate-200 hover:border-indigo-200 transition-all shadow-sm active:scale-95 w-full group"
   >
     <Icon size={15} className={`${color} shrink-0 group-hover:scale-110 transition-transform`} />
@@ -540,7 +540,7 @@ const Dashboard: React.FC = () => {
               {currentRole?.canViewAudit && <QuickBtn icon={History}   label="Audit Trail"       path="/audit"        navigate={navigate} />}
               <QuickBtn icon={BookOpen}      label="Synopsis"          path="/synopsis-submission" navigate={navigate} />
               <QuickBtn icon={ClipboardList} label="Thesis Tracking"  path="/thesis-tracking" navigate={navigate} />
-              <QuickBtn icon={User}          label="Open Student Portal" path="/student-login" navigate={navigate} />
+              <QuickBtn icon={User}          label="Open Student Portal" path="/student-login" navigate={navigate} newTab={true} />
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Maximize, Minimize, AlertCircle } from 'lucide-react';
+import { User, Lock, Maximize, Minimize, AlertCircle, BookOpen, Upload, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const StudentLogin: React.FC = () => {
@@ -47,24 +47,36 @@ const StudentLogin: React.FC = () => {
     e.preventDefault();
     setError(null);
 
-    if (cnic.length < 4) {
-      setError('Invalid CNIC. Please enter a valid CNIC number.');
+    // Normalize CNIC: strip all dashes and spaces
+    const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+
+    if (normalizedCnic.length < 4) {
+      setError('Invalid CNIC. Please enter a valid 13-digit CNIC number.');
       return;
     }
 
-    const last4 = cnic.slice(-4);
-    if (password !== last4) {
-      setError('Invalid password. Password must be the last 4 digits of your CNIC.');
+    const last4 = normalizedCnic.slice(-4);
+    if (password.trim() !== last4) {
+      setError('Incorrect password. Your password is the last 4 digits of your CNIC.');
       return;
     }
 
-    const student = students.find(s => s.cnic === cnic);
+    // Match student by CNIC — normalize both sides to strip dashes/spaces
+    const student = students.find(
+      s => (s.cnic || '').replace(/[-\s]/g, '').trim() === normalizedCnic
+    );
+
     if (!student) {
-      setError('Invalid CNIC. No student found with this CNIC.');
+      setError('Invalid CNIC. No student record found with this CNIC number.');
       return;
     }
 
-    if (student.finalThesisStatus !== 'Submitted' && student.semiFinalThesisStatus !== 'Submitted') {
+    // Eligibility check: gs4Form must be exactly 'Submitted' or 'Approved'
+    // (mirrors the ThesisTracking logic — gs4Form is the thesis submission status field)
+    const thesisStatus = (student.gs4Form || '').trim();
+    const isEligible = thesisStatus === 'Submitted' || thesisStatus === 'Approved';
+
+    if (!isEligible) {
       setError('You are not eligible to upload thesis at this stage.');
       return;
     }
@@ -162,7 +174,8 @@ const StudentLogin: React.FC = () => {
       </div>
 
       {/* Right Side: Visual Section */}
-      <div className="hidden lg:flex w-[55%] bg-indigo-600 rounded-[2.5rem] relative items-center justify-center p-12 lg:p-24 overflow-hidden ml-6">
+      <div className="hidden lg:flex w-[55%] bg-indigo-600 rounded-[2.5rem] relative items-center justify-center p-12 lg:p-20 overflow-hidden ml-6">
+        {/* Abstract Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute top-1/2 -left-24 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
@@ -173,17 +186,48 @@ const StudentLogin: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="relative z-10 max-w-xl text-center space-y-8"
+          className="relative z-10 max-w-lg w-full space-y-10"
         >
-          <div className="space-y-6">
-            <h2 className="text-5xl lg:text-6xl font-black text-white leading-[1.1] tracking-tight">
-              Hello <br />
-              <span className="text-indigo-200">PostGrad Hub</span>
+          {/* Heading */}
+          <div className="space-y-4">
+            <p className="text-indigo-300 text-xs font-black uppercase tracking-[0.3em]">Student Thesis Portal</p>
+            <h2 className="text-4xl lg:text-5xl font-black text-white leading-[1.1] tracking-tight">
+              Welcome,<br />
+              <span className="text-indigo-200">Student</span>
             </h2>
-            
-            <p className="text-indigo-100/80 text-lg font-medium leading-relaxed max-w-lg mx-auto">
-              Securely access your academic timeline and upload your thesis materials.
+            <p className="text-indigo-100/75 text-base font-medium leading-relaxed">
+              Please log in using your CNIC to access your thesis submission portal.
             </p>
+          </div>
+
+          {/* Info Cards */}
+          <div className="space-y-3">
+            {[
+              { icon: BookOpen, text: 'Once logged in, you can access your thesis submission panel and review your academic timeline.' },
+              { icon: Upload, text: 'Upload your thesis documents if you are eligible — your status must be marked as Submitted.' },
+              { icon: ShieldCheck, text: 'Make sure your CNIC details are correct before proceeding. Use digits only — dashes are auto-removed.' },
+            ].map(({ icon: Icon, text }, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
+                className="flex items-start gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/10"
+              >
+                <div className="p-2 bg-white/20 rounded-xl shrink-0 mt-0.5">
+                  <Icon size={15} className="text-white" />
+                </div>
+                <p className="text-indigo-100/85 text-sm font-medium leading-relaxed">{text}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Status Badge */}
+          <div className="pt-2">
+            <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="text-xs font-black text-white uppercase tracking-widest">Portal Operational &amp; Secure</span>
+            </div>
           </div>
         </motion.div>
       </div>
