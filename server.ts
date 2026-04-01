@@ -554,15 +554,28 @@ async function startServer() {
     }
   });
 
-  // ── Student Portal: Supabase Storage Upload ──────────────────────────────
-  // Auto-creates thesis_submissions table if it doesn't exist yet
+  // ── Student Portal: Supabase Storage & Table Sync ────────────────────────
+  const ensureThesisBucket = async () => {
+    try {
+      const supabase = getServiceClient();
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const exists = buckets?.some(b => b.name === 'thesis-files');
+      if (!exists) {
+        await supabase.storage.createBucket('thesis-files', {
+          public: true, // Make it public so links work, but we still use service role for writes
+          fileSizeLimit: 20971520 // 20MB
+        });
+      }
+    } catch (e) {
+      console.error("Storage bucket check failed:", e);
+    }
+  };
+
   const ensureThesisTable = async () => {
     try {
       const supabase = getServiceClient();
-      // Try to select from thesis_submissions; if it fails, table doesn't exist — create it
       const { error } = await supabase.from('thesis_submissions').select('id').limit(1);
       if (error && (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist'))) {
-        // Table doesn't exist — use raw SQL via Supabase REST API
         const config = getStoredConfig();
         const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.serviceKey || config.key;
         const supabaseUrl = config.url;
@@ -575,7 +588,6 @@ async function startServer() {
             is_uploaded BOOLEAN DEFAULT TRUE,
             uploaded_at TIMESTAMPTZ DEFAULT NOW()
           );`;
-        // Call Supabase SQL via pg-rest endpoint (requires service role key)
         await fetch(`${supabaseUrl}/rest/v1/rpc/exec`, {
           method: 'POST',
           headers: {
@@ -586,16 +598,46 @@ async function startServer() {
           body: JSON.stringify({ sql: sqlQuery })
         });
       }
-    } catch (e) {
-      // Silently ignore — table may already exist or exec rpc not available
-    }
+    } catch (e) {}
   };
+
+  // Proxy endpoint to force direct download for admins
+  app.get("/api/admin/proxy-download/:cnic", async (req, res) => {
+    const { cnic } = req.params;
+    const { filename } = req.query;
+    try {
+      const supabase = getServiceClient();
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      
+      // Download file from storage
+      const { data, error } = await supabase.storage
+        .from('thesis-files')
+        .download(`${normalizedCnic}.pdf`);
+
+      if (error) throw error;
+
+      // Set headers to force download with custom filename
+      const safeFilename = (filename || `${cnic}_thesis.pdf`).toString();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+      
+      const buffer = Buffer.from(await data.arrayBuffer());
+      return res.send(buffer);
+    } catch (error: any) {
+      console.error("Proxy download error:", error);
+      return res.status(error.status || 404).json({ 
+        success: false, 
+        message: "Failed to download file. Please ensure the 'thesis-files' bucket exists and contains the file." 
+      });
+    }
+  });
 
   app.post("/api/student/upload-thesis", async (req, res) => {
     const { cnic, fileData } = req.body;
     try {
       if (!cnic || !fileData) throw new Error("CNIC and fileData are required");
-
+      
+      await ensureThesisBucket();
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
       const supabase = getServiceClient();
 

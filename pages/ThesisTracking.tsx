@@ -483,11 +483,7 @@ const ThesisDesktopRow = ({ index, student, pendingChanges, onStatusChange, onCo
           <button
             onClick={() => {
               const fileName = `${student.regNo || 'Unknown'}_${student.programme || 'Thesis'}.pdf`;
-              const link = document.createElement('a');
-              link.href = student.publicUrl || '';
-              link.setAttribute('download', fileName);
-              link.target = "_blank"; // Fallback for some browsers
-              link.click();
+              window.location.href = `/api/admin/proxy-download/${student.cnic}?filename=${encodeURIComponent(fileName)}`;
             }}
             className="group/dl flex items-center justify-center w-11 h-11 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm active:scale-95 mx-auto"
             title="Download Scholar Thesis PDF"
@@ -586,11 +582,7 @@ const ThesisMobileCard = ({ student, pendingChanges, onStatusChange, onDateChang
             <button
               onClick={() => {
                 const fileName = `${student.regNo || 'Unknown'}_${student.programme || 'Thesis'}.pdf`;
-                const link = document.createElement('a');
-                link.href = student.publicUrl || '';
-                link.setAttribute('download', fileName);
-                link.target = "_blank";
-                link.click();
+                window.location.href = `/api/admin/proxy-download/${student.cnic}?filename=${encodeURIComponent(fileName)}`;
               }}
               className="p-4 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
               title="Download Scholar Thesis PDF"
