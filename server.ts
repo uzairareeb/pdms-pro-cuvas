@@ -725,7 +725,7 @@ async function startServer() {
   });
 
   app.post("/api/student/finalize-thesis-submission", async (req, res) => {
-    const { studentId, cnic, filePath } = req.body;
+    const { studentId, cnic, filePath, thesisTitle } = req.body;
     try {
       if (!cnic || !filePath) throw new Error("CNIC and filePath are required");
 
@@ -736,19 +736,36 @@ async function startServer() {
       await ensureThesisTable();
 
       // Upsert into thesis_submissions (separate table, students table untouched)
+      const upsertPayload: any = {
+        student_cnic: normalizedCnic,
+        student_id: studentId || null,
+        file_path: filePath,
+        is_uploaded: true,
+        uploaded_at: new Date().toISOString()
+      };
+      // Try to include thesis_title if column exists (gracefully ignored if not)
+      if (thesisTitle) upsertPayload.thesis_title = thesisTitle;
+
       const { error } = await supabase
         .from('thesis_submissions')
-        .upsert({
-          student_cnic: normalizedCnic,
-          student_id: studentId || null,
-          file_path: filePath,
-          is_uploaded: true,
-          uploaded_at: new Date().toISOString()
-        }, { onConflict: 'student_cnic' });
+        .upsert(upsertPayload, { onConflict: 'student_cnic' });
 
       if (error) {
-        // Table may not exist yet — provide clear SQL to run
-        if (error.code === '42P01' || error.message.includes('does not exist')) {
+        // If thesis_title column doesn't exist, retry without it
+        if (thesisTitle && (error.message.includes('thesis_title') || error.code === '42703')) {
+          const { error: error2 } = await supabase
+            .from('thesis_submissions')
+            .upsert({
+              student_cnic: normalizedCnic,
+              student_id: studentId || null,
+              file_path: filePath,
+              is_uploaded: true,
+              uploaded_at: new Date().toISOString()
+            }, { onConflict: 'student_cnic' });
+          if (error2 && error2.code !== '42P01' && !error2.message.includes('does not exist')) {
+            throw new Error(error2.message);
+          }
+        } else if (error.code === '42P01' || error.message.includes('does not exist')) {
           return res.status(400).json({
             success: false,
             needsMigration: true,
@@ -758,20 +775,95 @@ async function startServer() {
   student_cnic TEXT UNIQUE NOT NULL,
   student_id TEXT,
   file_path TEXT NOT NULL,
+  thesis_title TEXT,
   is_uploaded BOOLEAN DEFAULT TRUE,
   uploaded_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE POLICY "Allow all" ON thesis_submissions FOR ALL USING (true) WITH CHECK (true);
 ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
           });
+        } else {
+          throw new Error(error.message);
         }
-        throw new Error(error.message);
       }
 
       return res.json({ success: true, message: "Thesis finalized and recorded successfully!" });
     } catch (error: any) {
       console.error("Finalize error:", error);
       return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // ── Save thesis title separately (called right after upload) ─────────────
+  app.post("/api/student/save-title", async (req, res) => {
+    const { cnic, thesisTitle, studentName, regNo, department, degree, supervisorName } = req.body;
+    try {
+      if (!cnic || !thesisTitle) throw new Error("CNIC and thesisTitle are required");
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      const supabase = getServiceClient();
+      // Try upsert with thesis_title column — best effort
+      await supabase
+        .from('thesis_submissions')
+        .upsert({
+          student_cnic: normalizedCnic,
+          thesis_title: thesisTitle,
+          student_id: null,
+          file_path: `thesis-files/${normalizedCnic}.pdf`,
+          is_uploaded: false,
+          uploaded_at: new Date().toISOString()
+        }, { onConflict: 'student_cnic' })
+        .select();
+      // Silently succeed even if column doesn't exist (title stored client-side as fallback)
+      return res.json({ success: true });
+    } catch (error: any) {
+      // Non-critical — client has localStorage fallback
+      return res.json({ success: true, warning: error.message });
+    }
+  });
+
+  // ── Admin: fetch all thesis titles ────────────────────────────────────────
+  app.get("/api/admin/thesis-titles", async (req, res) => {
+    try {
+      const supabase = getServiceClient();
+      // Try to get thesis_title from thesis_submissions
+      const { data, error } = await supabase
+        .from('thesis_submissions')
+        .select('student_cnic, student_id, thesis_title, uploaded_at')
+        .eq('is_uploaded', true);
+
+      if (error) {
+        // Column may not exist — return empty gracefully
+        return res.json({ success: true, records: [] });
+      }
+
+      // Fetch all students to enrich the records
+      const { data: studentsData } = await supabase.from('students').select('id, cnic, name, reg_no, department, degree, supervisor_name');
+      const studentMap: Record<string, any> = {};
+      if (studentsData) {
+        studentsData.forEach((s: any) => {
+          const norm = (s.cnic || '').replace(/[-\s]/g, '').trim();
+          studentMap[norm] = s;
+        });
+      }
+
+      const records = (data || []).map((row: any) => {
+        const norm = (row.student_cnic || '').replace(/[-\s]/g, '').trim();
+        const st = studentMap[norm];
+        return {
+          cnic: norm,
+          thesisTitle: row.thesis_title || null,
+          submissionDate: row.uploaded_at,
+          studentName: st?.name || '',
+          regNo: st?.reg_no || '',
+          department: st?.department || '',
+          degree: st?.degree || '',
+          supervisorName: st?.supervisor_name || '',
+        };
+      });
+
+      return res.json({ success: true, records });
+    } catch (error: any) {
+      return res.json({ success: true, records: [] });
     }
   });
 

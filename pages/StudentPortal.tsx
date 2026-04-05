@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateStudentProfilePDF } from '../utils/pdfExport';
+import { extractThesisTitleFromFile } from '../utils/pdfTitleExtractor';
 
 const MAX_SIZE_MB = 20;
 const MAX_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -128,6 +129,8 @@ const StudentPortal: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [thesisTitle, setThesisTitle] = useState<string | null>(null);
+  const [extractingTitle, setExtractingTitle] = useState(false);
 
   const checkUploadStatus = useCallback(async (st: any) => {
     setLoading(true);
@@ -160,11 +163,30 @@ const StudentPortal: React.FC = () => {
     navigate('/student-login');
   };
 
-  const validateAndSelect = (file: File) => {
+  const validateAndSelect = async (file: File) => {
     setError(null);
     if (file.type !== 'application/pdf') { setError('Only PDF files are allowed.'); return; }
     if (file.size > MAX_BYTES) { setError(`File exceeds ${MAX_SIZE_MB}MB limit.`); return; }
     setSelectedFile(file);
+    // Auto-extract thesis title from PDF
+    setExtractingTitle(true);
+    try {
+      const extracted = await extractThesisTitleFromFile(file);
+      if (extracted) {
+        setThesisTitle(extracted);
+        // Persist in localStorage immediately as fallback for admin
+        if (student?.cnic) {
+          const cnic = student.cnic.replace(/[-\s]/g, '').trim();
+          localStorage.setItem(`thesis_title_${cnic}`, JSON.stringify({ title: extracted, extractedAt: new Date().toISOString() }));
+          // Non-blocking save to server
+          fetch('/api/student/save-title', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cnic: student.cnic, thesisTitle: extracted })
+          }).catch(() => {/* non-critical */});
+        }
+      }
+    } catch { /* ignore */ } finally { setExtractingTitle(false); }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -215,7 +237,7 @@ const StudentPortal: React.FC = () => {
       const res = await fetch('/api/student/finalize-thesis-submission', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId: student.id, cnic: student.cnic, filePath: uploadedFilePath })
+        body: JSON.stringify({ studentId: student.id, cnic: student.cnic, filePath: uploadedFilePath, thesisTitle: thesisTitle || undefined })
       });
       const data = await res.json();
       if (data.success) {
@@ -675,6 +697,15 @@ const StudentPortal: React.FC = () => {
                           <span className="text-xs font-bold text-slate-900 truncate max-w-[140px] text-right">{value}</span>
                         </div>
                       ))}
+                      {/* Extracted Thesis Title */}
+                      {thesisTitle && (
+                        <div className="pt-4 mt-1 border-t border-slate-100">
+                          <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                            <FileText size={9} /> Extracted Thesis Title
+                          </p>
+                          <p className="text-[10px] font-bold text-slate-800 leading-relaxed">{thesisTitle}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -742,6 +773,18 @@ const StudentPortal: React.FC = () => {
                                   </p>
                                   {!selectedFile && <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">or click to browse · Max {MAX_SIZE_MB}MB</p>}
                                   {selectedFile && <p className="text-[10px] text-slate-500 font-bold">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>}
+                                  {/* Extracted Title Display */}
+                                  {selectedFile && (
+                                    <div className="mt-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-left max-w-sm mx-auto">
+                                      <p className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.25em] mb-1 flex items-center gap-1.5">
+                                        {extractingTitle ? <Loader2 size={9} className="animate-spin" /> : <FileText size={9} />}
+                                        {extractingTitle ? 'Extracting title...' : 'Detected Title'}
+                                      </p>
+                                      <p className="text-xs font-bold text-indigo-800 leading-snug">
+                                        {extractingTitle ? <span className="animate-pulse">Reading PDF metadata...</span> : (thesisTitle || 'Could not extract — title will be set manually')}
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
                                 {!selectedFile ? (
                                   <div className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg group-hover:bg-indigo-600 transition-all pointer-events-none">
@@ -797,6 +840,12 @@ const StudentPortal: React.FC = () => {
                                 <p className="text-lg font-black text-slate-900">File uploaded successfully</p>
                                 <p className="text-xs text-slate-500 font-medium mt-1">Your file is in the cloud staging area.</p>
                               </div>
+                              {thesisTitle && (
+                                <div className="px-4 py-3 bg-white border border-emerald-200 rounded-xl text-left">
+                                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Extracted Thesis Title</p>
+                                  <p className="text-xs font-bold text-slate-800 leading-snug">{thesisTitle}</p>
+                                </div>
+                              )}
                             </div>
                             <div className="w-full p-6 border border-slate-200 rounded-2xl bg-slate-50 text-center space-y-5 flex flex-col items-center">
                               <div className="space-y-1">
