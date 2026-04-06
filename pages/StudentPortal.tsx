@@ -143,6 +143,7 @@ const StudentPortal: React.FC = () => {
         setStep('completed');
         setPublicUrl(data.publicUrl || null);
       } else if (data.exists) {
+        // Note: Default structure uses 'thesis-files/cnic.pdf'
         setUploadedFilePath(`thesis-files/${cnicBytes}.pdf`);
         setPublicUrl(data.publicUrl);
         setStep('staged');
@@ -936,12 +937,6 @@ const StudentPortal: React.FC = () => {
                                 </div>
                               </div>
                             </div>
-                            {publicUrl && (
-                              <a href={publicUrl} target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/25 active:scale-95">
-                                <FileText size={14} /> View Thesis PDF
-                              </a>
-                            )}
                           </motion.div>
                         )}
 

@@ -12,6 +12,9 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+ 
+  // Centralized Bucket Configuration (Case-Sensitive fix for Supabase)
+  const THESIS_BUCKET = 'thesis-files';
 
   const getStoredConfig = () => {
     try {
@@ -203,7 +206,7 @@ async function startServer() {
         let publicUrl = null;
         if (sub?.file_path) {
           const { data } = serviceClient.storage
-            .from('thesis-files')
+            .from(THESIS_BUCKET)
             .getPublicUrl(sub.file_path.split('/').pop() || '');
           publicUrl = data.publicUrl;
         }
@@ -560,10 +563,10 @@ async function startServer() {
     try {
       const supabase = getServiceClient();
       const { data: buckets } = await supabase.storage.listBuckets();
-      const exists = buckets?.some(b => b.name === 'thesis-files');
+      const exists = buckets?.some(b => b.name === THESIS_BUCKET);
       if (!exists) {
-        await supabase.storage.createBucket('thesis-files', {
-          public: true, // Make it public so links work, but we still use service role for writes
+        await supabase.storage.createBucket(THESIS_BUCKET, {
+          public: true, 
           fileSizeLimit: 20971520 // 20MB
         });
       }
@@ -612,10 +615,13 @@ async function startServer() {
       
       // Download file from storage
       const { data, error } = await supabase.storage
-        .from('thesis-files')
+        .from(THESIS_BUCKET)
         .download(`${normalizedCnic}.pdf`);
-
-      if (error) throw error;
+ 
+      if (error) {
+        console.error("Supabase Storage Error:", error);
+        throw error;
+      }
 
       // Set headers to force download with custom filename
       const safeFilename = (filename || `${cnic}_thesis.pdf`).toString();
@@ -628,7 +634,7 @@ async function startServer() {
       console.error("Proxy download error:", error);
       return res.status(error.status || 404).json({ 
         success: false, 
-        message: "Failed to download file. Please ensure the 'thesis-files' bucket exists and contains the file." 
+        message: `Failed to download file. Please ensure the '${THESIS_BUCKET}' bucket exists and contains the file.` 
       });
     }
   });
@@ -641,15 +647,15 @@ async function startServer() {
       await ensureThesisBucket();
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
       const supabase = getServiceClient();
-
+ 
       // Pre-check: file already in storage?
       const { data: existing } = await supabase.storage
-        .from('thesis-files')
+        .from(THESIS_BUCKET)
         .list('', { search: `${normalizedCnic}.pdf` });
 
       if (existing && existing.length > 0) {
         const { data: urlData } = supabase.storage
-          .from('thesis-files')
+          .from(THESIS_BUCKET)
           .getPublicUrl(`${normalizedCnic}.pdf`);
         return res.json({ success: false, alreadyUploaded: true, message: "Your thesis has already been submitted.", publicUrl: urlData.publicUrl });
       }
@@ -661,16 +667,16 @@ async function startServer() {
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
-        .from('thesis-files')
+        .from(THESIS_BUCKET)
         .upload(`${normalizedCnic}.pdf`, buffer, {
           contentType: 'application/pdf',
-          upsert: false
+          upsert: true // Allow overwriting if student re-uploads before final submission
         });
-
+ 
       if (error) throw new Error(error.message);
-
+ 
       const { data: urlData } = supabase.storage
-        .from('thesis-files')
+        .from(THESIS_BUCKET)
         .getPublicUrl(`${normalizedCnic}.pdf`);
 
       return res.json({
@@ -700,21 +706,21 @@ async function startServer() {
 
       if (dbData?.is_uploaded) {
         const { data: urlData } = supabase.storage
-          .from('thesis-files')
+          .from(THESIS_BUCKET)
           .getPublicUrl(`${normalizedCnic}.pdf`);
         return res.json({ success: true, exists: true, finalized: true, publicUrl: urlData.publicUrl, filePath: dbData.file_path });
       }
 
       // Check storage bucket (staged upload, not yet finalized)
       const { data: storageData } = await supabase.storage
-        .from('thesis-files')
+        .from(THESIS_BUCKET)
         .list('', { search: `${normalizedCnic}.pdf` });
-
+ 
       const staged = !!(storageData && storageData.length > 0);
       let publicUrl = null;
       if (staged) {
         const { data: urlData } = supabase.storage
-          .from('thesis-files')
+          .from(THESIS_BUCKET)
           .getPublicUrl(`${normalizedCnic}.pdf`);
         publicUrl = urlData.publicUrl;
       }
@@ -809,7 +815,7 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
           student_cnic: normalizedCnic,
           thesis_title: thesisTitle,
           student_id: null,
-          file_path: `thesis-files/${normalizedCnic}.pdf`,
+          file_path: `${THESIS_BUCKET}/${normalizedCnic}.pdf`,
           is_uploaded: false,
           uploaded_at: new Date().toISOString()
         }, { onConflict: 'student_cnic' })
