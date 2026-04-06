@@ -6,7 +6,7 @@ import {
   IdCard, BookMarked, FileCheck2, CloudUpload, FileBadge,
   ArrowRight, User, LayoutDashboard, ClipboardList,
   Download, Mail, Building2, Target, ChevronRight,
-  Calendar, Award, Layers, RefreshCcw
+  Calendar, Award, Layers, RefreshCcw, ShieldCheck, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateStudentProfilePDF } from '../utils/pdfExport';
@@ -831,46 +831,76 @@ const StudentPortal: React.FC = () => {
                         {/* STEP 2: STAGED */}
                         {step === 'staged' && !finalizing && (
                           <motion.div key="staged" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                            className="flex-1 flex flex-col items-center justify-center gap-6 py-6">
-                            <div className="w-full p-6 bg-emerald-50 border border-emerald-100 rounded-2xl text-center space-y-3">
-                              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm text-emerald-500">
-                                <CheckCircle2 size={32} />
-                              </div>
-                              <div>
-                                <p className="text-lg font-black text-slate-900">File uploaded successfully</p>
-                                <p className="text-xs text-slate-500 font-medium mt-1">Your file is in the cloud staging area.</p>
-                              </div>
-                              {thesisTitle && (
-                                <div className="px-4 py-3 bg-white border border-emerald-200 rounded-xl text-left">
-                                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Extracted Thesis Title</p>
-                                  <p className="text-xs font-bold text-slate-800 leading-snug">{thesisTitle}</p>
+                            className="flex-1 flex flex-col gap-6 py-2">
+                            {/* NEW PREMIUM FILE CARD */}
+                            <div className="relative group">
+                              <div className="absolute inset-0 bg-indigo-600/5 rounded-[2rem] blur-2xl group-hover:bg-indigo-600/10 transition-all opacity-0 group-hover:opacity-100" />
+                              <div className="relative bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all">
+                                <div className="flex flex-col sm:flex-row items-center gap-8">
+                                  {/* PDF Preview Icon */}
+                                  <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center shadow-inner shrink-0 relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 to-transparent" />
+                                    <FileText size={48} className="relative z-10" />
+                                    <div className="absolute top-0 right-0 p-1 bg-rose-500 text-white rounded-bl-xl font-black text-[8px] uppercase tracking-tighter">PDF</div>
+                                  </div>
+
+                                  <div className="flex-1 text-center sm:text-left space-y-2 min-w-0 w-full">
+                                    <div className="flex items-center justify-center sm:justify-between gap-4">
+                                      <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.25em] flex items-center gap-1.5">
+                                        <CheckCircle2 size={12} /> Cloud Staged & Ready
+                                      </p>
+                                      {/* DELETE BUTTON (Cross Mark) */}
+                                      <button 
+                                        onClick={() => {
+                                          setStep('select');
+                                          setSelectedFile(null);
+                                          setUploadedFilePath(null);
+                                          setThesisTitle(null);
+                                          setPublicUrl(null);
+                                        }}
+                                        className="absolute top-6 right-6 sm:relative sm:top-0 sm:right-0 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all active:scale-95"
+                                        title="Delete & Re-upload"
+                                      >
+                                        <X size={20} />
+                                      </button>
+                                    </div>
+                                    <h4 className="text-xl font-black text-slate-900 truncate pr-2">
+                                      {uploadedFilePath?.split('/').pop() || (selectedFile?.name || 'ThesisDocument.pdf')}
+                                    </h4>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
+                                      {student.name} · {student.regNo}
+                                    </p>
+                                    
+                                    {thesisTitle && (
+                                      <div className="mt-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                          <ShieldCheck size={11} className="text-indigo-400" /> Extracted Subject Title
+                                        </p>
+                                        <p className="text-xs font-bold text-slate-700 leading-relaxed italic line-clamp-2">"{thesisTitle}"</p>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              )}
+                              </div>
                             </div>
-                            <div className="w-full p-6 border border-slate-200 rounded-2xl bg-slate-50 text-center space-y-5 flex flex-col items-center">
-                              <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Step 2 of 2</p>
-                                <p className="text-sm font-bold text-slate-700">Authorize the final submission to lock your thesis permanently.</p>
+
+                            {/* Action Area */}
+                            <div className="bg-slate-900 rounded-[2rem] p-8 text-center space-y-6 shadow-2xl shadow-slate-900/20 relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
+                                <Lock size={120} className="text-white" />
                               </div>
-                              <div className="w-full max-w-sm space-y-3">
-                                <button onClick={() => setShowConfirm(true)}
-                                  className="w-full px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-95">
-                                  Final Submit Thesis
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    setStep('select');
-                                    setSelectedFile(null);
-                                    setUploadedFilePath(null);
-                                    setThesisTitle(null);
-                                    setPublicUrl(null);
-                                  }}
-                                  className="w-full px-8 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95"
-                                >
-                                  <RefreshCcw size={14} className="inline-block mr-2" />
-                                  Re-upload / Change File
-                                </button>
+                              <div className="relative z-10 space-y-2">
+                                <p className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.4em]">Final Protocol</p>
+                                <h3 className="text-lg font-black text-white uppercase tracking-tight">Authorization Required</h3>
+                                <p className="text-slate-400 text-xs font-medium max-w-sm mx-auto">
+                                  Confirming the final submission will permanently lock the record and notify the directorate.
+                                </p>
                               </div>
+                              <button onClick={() => setShowConfirm(true)}
+                                className="w-full max-w-sm px-10 py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/40 hover:bg-indigo-500 hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-3 mx-auto group">
+                                <span>Lock & Finalize Submission</span>
+                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                              </button>
                             </div>
                           </motion.div>
                         )}
