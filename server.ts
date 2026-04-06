@@ -259,7 +259,7 @@ async function startServer() {
     const { student } = req.body;
     try {
       const supabase = getSupabaseClient();
-      const { error } = await supabase.from('students').insert([{
+      const insertPayload: any = {
         id: student.id,
         sr_no: student.srNo,
         cnic: student.cnic,
@@ -292,13 +292,14 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
-        is_locked: student.isLocked,
-        file_path: student.filePath,
-        is_uploaded: student.isUploaded
-      }]);
+        is_locked: student.isLocked || false,
+        // Note: file_path and is_uploaded are in thesis_submissions table, NOT students table
+      };
+      const { error } = await supabase.from('students').insert([insertPayload]);
       if (error) throw error;
-      return res.json({ success: true });
+      return res.json({ success: true, message: 'Student added successfully.' });
     } catch (error: any) {
+      console.error('Student add error:', error.message);
       return res.status(400).json({ success: false, message: error.message });
     }
   });
@@ -340,14 +341,14 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
-        is_locked: student.isLocked,
-        file_path: student.filePath,
-        is_uploaded: student.isUploaded
+        is_locked: student.isLocked || false,
+        // Note: file_path and is_uploaded live in thesis_submissions, NOT students
       }));
       const { error } = await supabase.from('students').insert(rows);
       if (error) throw error;
-      return res.json({ success: true });
+      return res.json({ success: true, count: rows.length });
     } catch (error: any) {
+      console.error('Bulk add error:', error.message);
       return res.status(400).json({ success: false, message: error.message });
     }
   });
@@ -389,12 +390,12 @@ async function startServer() {
         validation_date: student.validationDate,
         comments: student.comments,
         is_locked: student.isLocked,
-        file_path: student.filePath,
-        is_uploaded: student.isUploaded
+        // Note: file_path and is_uploaded live in thesis_submissions, NOT students
       }).eq('id', student.id);
       if (error) throw error;
       return res.json({ success: true });
     } catch (error: any) {
+      console.error('Student update error:', error.message);
       return res.status(400).json({ success: false, message: error.message });
     }
   });

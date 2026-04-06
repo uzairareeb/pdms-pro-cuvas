@@ -852,10 +852,25 @@ const StudentPortal: React.FC = () => {
                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Step 2 of 2</p>
                                 <p className="text-sm font-bold text-slate-700">Authorize the final submission to lock your thesis permanently.</p>
                               </div>
-                              <button onClick={() => setShowConfirm(true)}
-                                className="w-full max-w-sm px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-95">
-                                Final Submit Thesis
-                              </button>
+                              <div className="w-full max-w-sm space-y-3">
+                                <button onClick={() => setShowConfirm(true)}
+                                  className="w-full px-8 py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-95">
+                                  Final Submit Thesis
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    setStep('select');
+                                    setSelectedFile(null);
+                                    setUploadedFilePath(null);
+                                    setThesisTitle(null);
+                                    setPublicUrl(null);
+                                  }}
+                                  className="w-full px-8 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95"
+                                >
+                                  <RefreshCcw size={14} className="inline-block mr-2" />
+                                  Re-upload / Change File
+                                </button>
+                              </div>
                             </div>
                           </motion.div>
                         )}
@@ -878,7 +893,7 @@ const StudentPortal: React.FC = () => {
                             </div>
                             <div className="space-y-2">
                               <h4 className="text-2xl font-black text-slate-900 leading-tight">Thesis Submitted!</h4>
-                              <p className="text-slate-500 text-sm font-medium">Your thesis has been submitted and the record is permanently locked.</p>
+                              <p className="text-slate-500 text-sm font-medium">Your thesis has been submitted and the record is <span className="text-rose-600 font-bold uppercase tracking-widest">Permanently Locked</span>.</p>
                             </div>
                             <div className="w-full max-w-md p-5 bg-slate-50 border border-slate-200 rounded-2xl text-left">
                               <div className="flex items-start gap-3">

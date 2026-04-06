@@ -375,14 +375,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (isDatabaseConnected) {
       try {
-        await fetch('/api/supabase/students/add', {
+        const res = await fetch('/api/supabase/students/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ student: newStudent })
         });
-      } catch (e) {
-        notify("Failed to sync with cloud database", "error");
-        return;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+          throw new Error(data.message || `Insertion failed with status ${res.status}`);
+        }
+      } catch (e: any) {
+        notify(e.message || "Failed to sync with cloud database", "error");
+        throw e;
       }
     }
 
@@ -436,12 +440,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ student: updated })
         });
-        if (!res.ok) throw new Error();
-      } catch (e) {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+          throw new Error(data.message || `Update failed with status ${res.status}`);
+        }
+      } catch (e: any) {
         // Rollback on failure
         setStudents(previousStudents);
-        notify("Failed to sync update with cloud. Rolling back.", "error");
-        return;
+        notify(e.message || "Failed to sync update with cloud. Rolling back.", "error");
+        throw e;
       }
     }
 
