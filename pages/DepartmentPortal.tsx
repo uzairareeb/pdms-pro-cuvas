@@ -22,8 +22,8 @@ const DepartmentPortal: React.FC = () => {
   if (!currentDeptUser) return null;
 
   const deptStudents = useMemo(() => {
-    return students.filter(s => s.departmentId === currentDeptUser.departmentId);
-  }, [students, currentDeptUser.departmentId]);
+    return students.filter(s => s.department === currentDeptUser.department);
+  }, [students, currentDeptUser.department]);
 
   // Dashboard Stats
   const stats = useMemo(() => {
@@ -235,7 +235,7 @@ const DepartmentPortal: React.FC = () => {
                           data.map(e => `${e.cnic},${e.name},${e.regNo || ''},${e.degree},${e.status}`).join("\n");
                         const link = document.createElement("a");
                         link.setAttribute("href", encodeURI(csvContent));
-                        link.setAttribute("download", `${report.title.replace(/ /g, '_')}_${currentDeptUser.departmentId}.csv`);
+                        link.setAttribute("download", `${report.title.replace(/ /g, '_')}_${currentDeptUser.department}.csv`);
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
@@ -263,14 +263,14 @@ const DepartmentPortal: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {departmentAuditLogs.filter(log => log.departmentId === currentDeptUser.departmentId).map(log => (
+                        {departmentAuditLogs.filter(log => log.department === currentDeptUser.department).map(log => (
                           <tr key={log.id} className="hover:bg-slate-50">
                             <td className="px-6 py-4 font-medium text-slate-500">{new Date(log.timestamp).toLocaleString()}</td>
                             <td className="px-6 py-4 font-bold text-slate-900">{log.action}</td>
                             <td className="px-6 py-4 text-slate-600">{log.details}</td>
                           </tr>
                         ))}
-                        {departmentAuditLogs.filter(log => log.departmentId === currentDeptUser.departmentId).length === 0 && (
+                        {departmentAuditLogs.filter(log => log.department === currentDeptUser.department).length === 0 && (
                           <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-500 font-medium">No actions logged yet.</td></tr>
                         )}
                       </tbody>

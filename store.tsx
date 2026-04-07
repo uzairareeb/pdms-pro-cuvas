@@ -249,7 +249,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const results: any = {};
 
         for (const endpoint of endpoints) {
-          const res = await fetch(endpoint.url);
+          let url = endpoint.url;
+          if (endpoint.key === 'students' && currentDeptUser) {
+            url += `?department=${encodeURIComponent(currentDeptUser.department)}`;
+          }
+          const res = await fetch(url);
           if (!res.ok) {
             const text = await res.text();
             if (text.includes("Rate exceeded")) {
@@ -283,7 +287,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentDeptUser, isDatabaseConnected]);
 
   useEffect(() => {
     fetchInitialData();

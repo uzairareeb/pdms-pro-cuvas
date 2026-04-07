@@ -180,12 +180,19 @@ async function startServer() {
   // Supabase Student Operations
   app.get("/api/supabase/students", async (req, res) => {
     try {
+      const { department } = req.query;
       const supabase = getSupabaseClient();
       const serviceClient = getServiceClient();
 
+      let query = supabase.from('students').select('*').order('sr_no', { ascending: true });
+      
+      if (department) {
+        query = query.eq('department', department);
+      }
+
       // Parallel fetch students and their submissions
       const [studentsRes, submissionsRes] = await Promise.all([
-        supabase.from('students').select('*').order('sr_no', { ascending: true }),
+        query,
         serviceClient.from('thesis_submissions').select('*')
       ]);
 
