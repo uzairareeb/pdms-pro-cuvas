@@ -135,10 +135,12 @@ const StudentPortal: React.FC = () => {
   const checkUploadStatus = useCallback(async (st: any) => {
     setLoading(true);
     try {
-      if (st.isUploaded || st.filePath) { setStep('completed'); return; }
+      if (typeof st.isUploaded === 'undefined') { /* initial load check */ }
       const cnicBytes = st.cnic.replace(/[-\s]/g, '').trim();
       const res = await fetch(`/api/student/check-upload/${cnicBytes}`);
       const data = await res.json();
+      if (data.thesisTitle) setThesisTitle(data.thesisTitle);
+      
       if (data.finalized) {
         setStep('completed');
         setPublicUrl(data.publicUrl || null);
@@ -776,14 +778,21 @@ const StudentPortal: React.FC = () => {
                                   {selectedFile && <p className="text-[10px] text-slate-500 font-bold">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>}
                                   {/* Extracted Title Display */}
                                   {selectedFile && (
-                                    <div className="mt-3 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-left max-w-sm mx-auto">
-                                      <p className="text-[8px] font-black text-indigo-400 uppercase tracking-[0.25em] mb-1 flex items-center gap-1.5">
-                                        {extractingTitle ? <Loader2 size={9} className="animate-spin" /> : <FileText size={9} />}
-                                        {extractingTitle ? 'Extracting title...' : 'Detected Title'}
-                                      </p>
-                                      <p className="text-xs font-bold text-indigo-800 leading-snug">
-                                        {extractingTitle ? <span className="animate-pulse">Reading PDF metadata...</span> : (thesisTitle || 'Could not extract — title will be set manually')}
-                                      </p>
+                                    <div className="mt-4 px-5 py-4 bg-white border border-indigo-100 shadow-sm rounded-2xl text-left max-w-sm mx-auto relative overflow-hidden group/select-title">
+                                      <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50/50 rounded-full blur-xl -mr-12 -mt-12 group-hover/select-title:bg-indigo-50/80 transition-all" />
+                                      <div className="relative z-10">
+                                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1.5 flex items-center gap-1.5">
+                                          {extractingTitle ? <Loader2 size={10} className="animate-spin text-indigo-500" /> : <ShieldCheck size={10} className="text-emerald-500" />}
+                                          {extractingTitle ? 'Analyzing Document Schema...' : 'Extracted Research Title'}
+                                        </p>
+                                        <p className="text-xs font-black text-slate-800 leading-snug">
+                                          {extractingTitle ? (
+                                            <span className="opacity-40 animate-pulse uppercase tracking-widest text-[8px]">Scanning Metadata...</span>
+                                          ) : (
+                                            thesisTitle || <span className="text-rose-500 uppercase tracking-widest text-[8px]">Direct detection failed — manually entering...</span>
+                                          )}
+                                        </p>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -872,13 +881,31 @@ const StudentPortal: React.FC = () => {
                                       {student.name} · {student.regNo}
                                     </p>
                                     
-                                    {thesisTitle && (
-                                      <div className="mt-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                          <ShieldCheck size={11} className="text-indigo-400" /> Extracted Subject Title
-                                        </p>
-                                        <p className="text-xs font-bold text-slate-700 leading-relaxed italic line-clamp-2">"{thesisTitle}"</p>
+                                    {thesisTitle ? (
+                                      <div className="mt-5 p-5 bg-indigo-50/50 border border-indigo-100/50 rounded-2xl relative overflow-hidden group/title">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover/title:bg-indigo-500/10 transition-all" />
+                                        <div className="relative z-10">
+                                          <div className="flex items-center justify-between mb-2">
+                                            <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                                              <ShieldCheck size={14} /> Official Research Title
+                                            </p>
+                                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-md text-[8px] font-black uppercase tracking-tighter">Extracted from PDF</span>
+                                          </div>
+                                          <p className="text-sm font-bold text-slate-800 leading-relaxed tracking-tight break-words">
+                                            "{thesisTitle}"
+                                          </p>
+                                          <p className="mt-3 text-[9px] text-slate-400 font-medium leading-normal">
+                                            Please verify if the title matches your research exactly. If not, you can re-upload your document.
+                                          </p>
+                                        </div>
                                       </div>
+                                    ) : (
+                                      extractingTitle && (
+                                        <div className="mt-5 p-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-3 animate-pulse">
+                                          <Loader2 size={16} className="text-indigo-400 animate-spin" />
+                                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Analyzing PDF Schema...</span>
+                                        </div>
+                                      )
                                     )}
                                   </div>
                                 </div>
@@ -936,6 +963,12 @@ const StudentPortal: React.FC = () => {
                                   </p>
                                 </div>
                               </div>
+                              {thesisTitle && (
+                                <div className="mt-4 pt-4 border-t border-slate-200/60">
+                                  <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1">Finalized Research Title</p>
+                                  <p className="text-xs font-black text-slate-900 leading-relaxed italic line-clamp-3">"{thesisTitle}"</p>
+                                </div>
+                              )}
                             </div>
                           </motion.div>
                         )}

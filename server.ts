@@ -700,7 +700,7 @@ async function startServer() {
       // Check thesis_submissions table first (final submission)
       const { data: dbData } = await supabase
         .from('thesis_submissions')
-        .select('file_path, is_uploaded')
+        .select('file_path, is_uploaded, thesis_title')
         .eq('student_cnic', normalizedCnic)
         .maybeSingle();
 
@@ -708,7 +708,14 @@ async function startServer() {
         const { data: urlData } = supabase.storage
           .from(THESIS_BUCKET)
           .getPublicUrl(`${normalizedCnic}.pdf`);
-        return res.json({ success: true, exists: true, finalized: true, publicUrl: urlData.publicUrl, filePath: dbData.file_path });
+        return res.json({ 
+          success: true, 
+          exists: true, 
+          finalized: true, 
+          publicUrl: urlData.publicUrl, 
+          filePath: dbData.file_path,
+          thesisTitle: dbData.thesis_title 
+        });
       }
 
       // Check storage bucket (staged upload, not yet finalized)
@@ -725,7 +732,13 @@ async function startServer() {
         publicUrl = urlData.publicUrl;
       }
 
-      return res.json({ success: true, exists: staged, finalized: false, publicUrl });
+      return res.json({ 
+        success: true, 
+        exists: staged, 
+        finalized: false, 
+        publicUrl,
+        thesisTitle: dbData?.thesis_title || null 
+      });
     } catch (error: any) {
       return res.json({ success: true, exists: false, finalized: false, publicUrl: null });
     }
