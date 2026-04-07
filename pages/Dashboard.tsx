@@ -222,6 +222,41 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
+      {/* ── Department Portal Access Banner ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 shadow-lg shadow-indigo-600/20 no-print"
+      >
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
+          <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
+          <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+        </div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-white/15 backdrop-blur-sm rounded-xl shrink-0">
+              <Building2 size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.25em]">Portal Access</p>
+              <h3 className="text-sm font-black text-white tracking-tight leading-tight">Department Coordinator Portal</h3>
+              <p className="text-[10px] text-indigo-200/80 font-medium mt-0.5">Log in as a department head to manage your students' research progress</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/department-login')}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white text-indigo-700 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md hover:bg-indigo-50 active:scale-95 transition-all shrink-0 group"
+          >
+            <span>Access Portal</span>
+            <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        </div>
+      </motion.div>
+
       {/* ── KPI Row 1: Primary Metrics ── */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard
@@ -540,7 +575,7 @@ const Dashboard: React.FC = () => {
               {currentRole?.canViewAudit && <QuickBtn icon={History}   label="Audit Trail"       path="/audit"        navigate={navigate} />}
               <QuickBtn icon={BookOpen}      label="Synopsis"          path="/synopsis-submission" navigate={navigate} />
               <QuickBtn icon={ClipboardList} label="Thesis Tracking"  path="/thesis-tracking" navigate={navigate} />
-              <QuickBtn icon={User}          label="Open Student Portal" path="/student-login" navigate={navigate} newTab={true} />
+
             </div>
           </div>
 
