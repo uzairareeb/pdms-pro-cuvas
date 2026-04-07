@@ -28,24 +28,28 @@ const cleanCandidate = (text: string): string => {
 const isLikelyTitle = (line: string): boolean => {
   const t = line.trim();
   if (!t || t.length < 5 || t.length > 500) return false;
-  // Exclude common university headers/metadata that aren't the thesis title
   const lower = t.toLowerCase();
-  const exclusions = [
-    'university', 'directorate', 'postgraduate', 'management', 'system',
-    'department', 'faculty', 'institute', 'submitted', 'requirement',
-    'degree', 'phil', 'phd', 'session', 'semester', 'roll no', 'reg no',
-    'supervisor', 'by:', 'author', 'page', 'www.', 'http', '©'
+  
+  // High-confidence exclusions for CUVAS specific headers that aren't the title
+  const markers = [
+    'a thesis submitted', 'partial fulfillment', 'requirement for the degree',
+    'master of philosophy', 'master of science', 'doctor of philosophy',
+    'department of', 'faculty of', 'cholistan university', 'cuvas',
+    'by:', 'abdur rauf', '22-cuvas', 'pakistan', '2025', '2024', '2023'
   ];
-  if (exclusions.some(exc => lower.includes(exc))) return false;
-  if (/^\d+$/.test(t)) return false;
+  if (markers.some(m => lower.includes(m))) return false;
+  
+  // If it's just 'By', it's a separator, not a title
+  if (lower === 'by') return false;
+  
   return true;
 };
 
 /**
  * Extract thesis title from a PDF File object.
- * Strategy:
- *  1. Read PDF metadata `info.Title`
- *  2. Search top 40% of page 1 for the most prominent text block
+ * Strategy tailored for CUVAS thesis covers:
+ *  1. Scan top of page 1.
+ *  2. Find the first substantive text block before the 'By' marker.
  */
 export const extractThesisTitleFromFile = async (file: File): Promise<string | null> => {
   try {
@@ -54,35 +58,25 @@ export const extractThesisTitleFromFile = async (file: File): Promise<string | n
     const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
 
-    // Try metadata first
-    const metadata = await pdf.getMetadata().catch(() => null);
-    const metaTitle = (metadata?.info as any)?.Title?.trim();
-    if (metaTitle && metaTitle.length > 10 && metaTitle.length < 300 && !metaTitle.includes('Microsoft Word')) {
-      return metaTitle;
-    }
-
     const page = await pdf.getPage(1);
     const viewport = page.getViewport({ scale: 1.0 });
     const pageHeight = viewport.height;
     const textContent = await page.getTextContent();
 
-    const items: { text: string; fontSize: number; y: number }[] = [];
+    const allLines: { text: string; fontSize: number; y: number }[] = [];
     for (const item of textContent.items as any[]) {
       const str = (item.str || '').replace(/\s+/g, ' ').trim();
       if (!str) continue;
       const fontSize = item.transform ? Math.abs(item.transform[0]) : 0;
       const y = item.transform ? item.transform[5] : 0;
-      // Focus on the top 40% of the page
-      if (y > pageHeight * 0.6) {
-        items.push({ text: str, fontSize, y: Math.round(y) });
-      }
+      allLines.push({ text: str, fontSize, y: Math.round(y) });
     }
 
-    if (items.length === 0) return null;
+    if (allLines.length === 0) return null;
 
-    // Group by line (Y coordinate)
+    // Group items by line (Y coordinate)
     const lineMap: Map<number, { texts: string[]; fontSize: number }> = new Map();
-    for (const item of items) {
+    for (const item of allLines) {
       const existing = lineMap.get(item.y);
       if (existing) {
         existing.texts.push(item.text);
@@ -97,30 +91,34 @@ export const extractThesisTitleFromFile = async (file: File): Promise<string | n
       .sort((a, b) => b[0] - a[0])
       .map(([, v]) => ({ text: v.texts.join(' '), fontSize: v.fontSize }));
 
-    // Find the most prominent (largest font) among likely titles
-    const candidates = sortedLines.filter(l => isLikelyTitle(l.text));
-    if (candidates.length === 0) return null;
-
-    const maxFont = Math.max(...candidates.map(l => l.fontSize));
-    const prominentLines = sortedLines.filter(l => l.fontSize >= maxFont * 0.8 && isLikelyTitle(l.text));
-
-    if (prominentLines.length > 0) {
-      // Merge consecutive prominent lines (they likely form the multi-line title)
-      const titleParts: string[] = [];
-      const firstLineIndex = sortedLines.indexOf(prominentLines[0]);
+    // Stop extraction once we hit 'By' or 'Submitted'
+    const titleParts: string[] = [];
+    for (const line of sortedLines) {
+      const txt = line.text.trim();
+      const lower = txt.toLowerCase();
       
-      for (let i = firstLineIndex; i < Math.min(firstLineIndex + 5, sortedLines.length); i++) {
-        const line = sortedLines[i];
-        if (line.fontSize >= maxFont * 0.7 && isLikelyTitle(line.text)) {
-          titleParts.push(line.text);
-        } else if (titleParts.length > 0) {
-          break; // Stop once we hit a non-prominent line after starting
-        }
+      // If we hit 'By' or credentials, we've likely passed the title
+      if (lower === 'by' || lower.includes('submitted in the partial')) {
+        break;
       }
+      
+      // If it's a valid title-like line and we haven't hit the limit
+      if (isLikelyTitle(txt)) {
+        titleParts.push(txt);
+      } else if (titleParts.length > 0) {
+        // If we already started collecting but hit something else, 
+        // we check if it's just a small gap or the end.
+        break; 
+      }
+    }
+
+    if (titleParts.length > 0) {
       return cleanCandidate(titleParts.join(' '));
     }
 
-    return candidates[0] ? cleanCandidate(candidates[0].text) : null;
+    // Fallback: search anywhere in top 40%
+    const fallback = sortedLines.find(l => l.fontSize >= 12 && isLikelyTitle(l.text));
+    return fallback ? cleanCandidate(fallback.text) : null;
 
   } catch (err) {
     console.warn('PDF title extraction failed:', err);
