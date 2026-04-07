@@ -1,7 +1,7 @@
-
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { 
-  Student, SystemSettings, AuditLog, StudentStatus, Gender, StaffUser, RolePermissions, SessionConfig, ValidationStatus, ModulePermissions, UserRole, DepartmentUser, DepartmentAuditLog
+  Student, SystemSettings, AuditLog, StudentStatus, Gender, StaffUser, RolePermissions, SessionConfig, ValidationStatus, ModulePermissions, UserRole, DepartmentUser, DepartmentAuditLog, Department
 } from './types';
 
 interface Notification {
@@ -13,6 +13,7 @@ interface AppContextType {
   students: Student[];
   degrees: string[];
   departments: string[];
+  allDepartments: Department[];
   programmes: string[];
   faculty: string[];
   settings: SystemSettings;
@@ -194,6 +195,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     JSON.parse(localStorage.getItem('das_reviewed_actions') || '[]')
   );
   const [departmentUsers, setDepartmentUsers] = useState<DepartmentUser[]>([]);
+  const [allDepartments, setAllDepartments] = useState<Department[]>([]);
   const [currentDeptUser, setCurrentDeptUser] = useState<DepartmentUser | null>(() => {
     const saved = localStorage.getItem('dept_user_obj');
     return saved ? JSON.parse(saved) : null;
@@ -241,6 +243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           { key: 'sessions', url: '/api/supabase/sessions' },
           { key: 'deptUsers', url: '/api/supabase/department-users' },
           { key: 'deptLogs', url: '/api/supabase/department-audit-logs' },
+          { key: 'allDepts', url: '/api/supabase/departments' },
         ];
 
         const results: any = {};
@@ -272,6 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (results.sessions?.success) setSessions(results.sessions.data);
         if (results.deptUsers?.success) setDepartmentUsers(results.deptUsers.data);
         if (results.deptLogs?.success) setDepartmentAuditLogs(results.deptLogs.data);
+        if (results.allDepts?.success) setAllDepartments(results.allDepts.data);
       }
     } catch (err: any) {
       console.error("Error fetching initial data:", err);
@@ -299,6 +303,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     return () => clearInterval(interval);
   }, [fetchInitialData]);
+
+  // Supabase Real-time Subscription
+  useEffect(() => {
+    if (!isDatabaseConnected) return;
+    
+    const db = settings.databases.supabase;
+    if (!db.url || !db.key) return;
+
+    try {
+      const client = createClient(db.url, db.key);
+      const subscription = client
+        .channel('public:students')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, (payload) => {
+          console.log('Realtime update received:', payload);
+          // Instead of complex patching, we re-fetch to ensure data integrity
+          fetchInitialData();
+        })
+        .subscribe();
+      
+      return () => {
+        client.removeChannel(subscription);
+      };
+    } catch (e) {
+      console.error("Realtime subscription failed:", e);
+    }
+  }, [isDatabaseConnected, settings.databases.supabase.url, settings.databases.supabase.key, fetchInitialData]);
 
   useEffect(() => {
     localStorage.setItem('das_reviewed_actions', JSON.stringify(reviewedCriticalActions));
@@ -792,6 +822,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       departmentUserId: currentDeptUser.id,
       departmentUserName: currentDeptUser.name,
       department: currentDeptUser.department,
+      departmentId: currentDeptUser.departmentId,
       action,
       details,
     };
@@ -896,6 +927,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       markActionAsReviewed,
       sendReminder,
       setupDatabase,
+      allDepartments,
       departmentUsers,
       currentDeptUser,
       departmentAuditLogs,

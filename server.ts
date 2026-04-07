@@ -913,6 +913,7 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
         email: u.email,
         password: u.password,
         department: u.department,
+        departmentId: u.department_id,
         lastLogin: u.last_login,
         createdAt: u.created_at,
       }));
@@ -932,6 +933,7 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
         email: user.email,
         password: user.password,
         department: user.department,
+        department_id: user.departmentId,
         created_at: new Date().toISOString(),
       }]);
       if (error) throw error;
@@ -945,7 +947,11 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
     const { user } = req.body;
     try {
       const supabase = getSupabaseClient();
-      const updatePayload: any = { name: user.name, department: user.department };
+      const updatePayload: any = { 
+        name: user.name, 
+        department: user.department,
+        department_id: user.departmentId
+      };
       if (user.password) updatePayload.password = user.password;
       const { error } = await supabase.from('department_users').update(updatePayload).eq('id', user.id);
       if (error) throw error;
@@ -978,7 +984,7 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
       return res.json({
         success: true, user: {
           id: data.id, name: data.name, email: data.email,
-          department: data.department, lastLogin: new Date().toISOString()
+          department: data.department, departmentId: data.department_id, lastLogin: new Date().toISOString()
         }
       });
     } catch (error: any) {
@@ -992,7 +998,13 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
       const supabase = getSupabaseClient();
       const { data, error } = await supabase.from('department_audit_logs').select('*').order('timestamp', { ascending: false }).limit(500);
       if (error) throw error;
-      return res.json({ success: true, data: data || [] });
+      const mapped = (data || []).map((l: any) => ({
+        ...l,
+        departmentUserId: l.department_user_id,
+        departmentUserName: l.department_user_name,
+        departmentId: l.department_id
+      }));
+      return res.json({ success: true, data: mapped });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -1008,11 +1020,24 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
         department_user_id: log.departmentUserId,
         department_user_name: log.departmentUserName,
         department: log.department,
+        department_id: log.departmentId,
         action: log.action,
         details: log.details,
       }]);
       if (error) throw error;
       return res.json({ success: true });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // ── Departments API ───────────────────────────────────────────────────────
+  app.get("/api/supabase/departments", async (req, res) => {
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('departments').select('*').order('name', { ascending: true });
+      if (error) throw error;
+      return res.json({ success: true, data: data || [] });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }

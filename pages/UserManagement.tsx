@@ -124,7 +124,7 @@ const FilterSelect = ({ label, value, icon: Icon, options, onChange }: any) => {
 };
 
 const UserManagement: React.FC = () => {
-  const { staff, addStaff, updateStaff, deleteStaff, currentUser, settings, notify, departmentUsers, addDepartmentUser, updateDepartmentUser, deleteDepartmentUser, departments } = useStore();
+  const { staff, addStaff, updateStaff, deleteStaff, currentUser, settings, notify, departmentUsers, addDepartmentUser, updateDepartmentUser, deleteDepartmentUser, allDepartments } = useStore();
   const [activeTab, setActiveTab] = useState<'system'|'department'>('system');
   
   // System states
@@ -142,19 +142,29 @@ const UserManagement: React.FC = () => {
   const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
   const [deletingDeptUser, setDeletingDeptUser] = useState<{id: string, name: string} | null>(null);
   const [deptFormData, setDeptFormData] = useState<Omit<DepartmentUser, 'id'>>({
-    name: '', email: '', password: '', department: departments[0] || ''
+    name: '', 
+    email: '', 
+    password: '', 
+    department: allDepartments[0]?.name || '',
+    departmentId: allDepartments[0]?.id || ''
   });
 
   const filteredDeptUsers = useMemo(() => departmentUsers.filter(u => {
     const minSearch = deptSearchTerm.toLowerCase();
     const matchSearch = u.name.toLowerCase().includes(minSearch) || u.email.toLowerCase().includes(minSearch);
-    const matchDept = deptDeptFilter === 'All' || u.department === deptDeptFilter;
+    const matchDept = deptDeptFilter === 'All' || u.departmentId === deptDeptFilter;
     return matchSearch && matchDept;
   }), [departmentUsers, deptSearchTerm, deptDeptFilter]);
 
   const handleDeptEdit = (u: DepartmentUser) => {
     setEditingDeptId(u.id);
-    setDeptFormData({ name: u.name, email: u.email, password: u.password || '', department: u.department });
+    setDeptFormData({ 
+      name: u.name, 
+      email: u.email, 
+      password: u.password || '', 
+      department: u.department,
+      departmentId: u.departmentId
+    });
     setIsDeptModalOpen(true);
   };
 
@@ -173,7 +183,13 @@ const UserManagement: React.FC = () => {
         notify(`Department login for ${deptFormData.name} created.`, 'success');
       }
       setIsDeptModalOpen(false); setEditingDeptId(null);
-      setDeptFormData({ name: '', email: '', password: '', department: departments[0] || '' });
+      setDeptFormData({ 
+        name: '', 
+        email: '', 
+        password: '', 
+        department: allDepartments[0]?.name || '',
+        departmentId: allDepartments[0]?.id || ''
+      });
     } catch (err: any) {
       notify(`Error saving department user: ${err.message}`, 'error');
     }
@@ -276,7 +292,13 @@ const UserManagement: React.FC = () => {
               setEditingId(null); setIsModalOpen(true);
             } else {
               setEditingDeptId(null);
-              setDeptFormData({ name: '', email: '', password: '', department: departments[0] || '' });
+              setDeptFormData({ 
+                name: '', 
+                email: '', 
+                password: '', 
+                department: allDepartments[0]?.name || '',
+                departmentId: allDepartments[0]?.id || ''
+              });
               setIsDeptModalOpen(true);
             }
           }}
@@ -458,7 +480,14 @@ const UserManagement: React.FC = () => {
                 />
              </div>
           </div>
-          <FilterSelect label="Department" value={deptDeptFilter} icon={Building2} options={['All', ...departments]} onChange={setDeptDeptFilter} />
+          <FilterSelect 
+            label="Department" 
+            value={deptDeptFilter} 
+            icon={Building2} 
+            options={['All', ...allDepartments.map(d => d.id)]} 
+            onChange={setDeptDeptFilter} 
+            displayValue={deptDeptFilter === 'All' ? 'All Departments' : allDepartments.find(d => d.id === deptDeptFilter)?.name}
+          />
         </div>
 
         <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
@@ -667,8 +696,11 @@ const UserManagement: React.FC = () => {
                       <div className="relative group">
                         <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
                         <select required className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-bold text-sm text-slate-900 appearance-none cursor-pointer transition-all"
-                        value={deptFormData.department} onChange={e => setDeptFormData({...deptFormData, department: e.target.value})}>
-                          {departments.map((d: string) => <option key={d} value={d}>{d}</option>)}
+                        value={deptFormData.departmentId} onChange={e => {
+                          const dept = allDepartments.find(d => d.id === e.target.value);
+                          if (dept) setDeptFormData({...deptFormData, departmentId: dept.id, department: dept.name});
+                        }}>
+                          {allDepartments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300"><ChevronRight size={14} className="rotate-90" /></div>
                       </div>

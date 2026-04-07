@@ -30,6 +30,7 @@ export interface Student {
   degree: string;
   session: string;
   department: string;
+  departmentId: string;
   programme: string;
   currentSemester: number;
   status: StudentStatus;
@@ -105,7 +106,7 @@ export interface RolePermissions {
   ReadmissionRegistry?: ModulePermissions;
   SynopsisSubmission?: ModulePermissions;
   ThesisTracking?: ModulePermissions;
-
+ 
   // Legacy Compatibility Flags
   canAdd: boolean;
   canEdit: boolean;
@@ -114,83 +115,90 @@ export interface RolePermissions {
   canExport: boolean;
   canViewAudit: boolean;
   canLockRecords: boolean;
-}
-
-export interface SystemSettings {
-  institution: {
+  }
+  
+  export interface SystemSettings {
+    institution: {
+      name: string;
+      directorate: string;
+      systemName: string;
+      email: string;
+      contact: string;
+      academicYear: string;
+      admissionSession: string;
+      logo?: string;
+    };
+    security: {
+      sessionTimeout: number;
+      maxLoginAttempts: number;
+      enableRecordLocking: boolean;
+      enableDeletion: boolean;
+    };
+    maintenance: {
+      version: string;
+      lastBackup: string;
+    };
+    milestones: {
+      gs2: { enabled: boolean };
+      synopsis: { enabled: boolean };
+      gs4: { enabled: boolean };
+      semiFinal: { enabled: boolean };
+      final: { enabled: boolean };
+      coe: { enabled: boolean };
+    };
+    databases: {
+      supabase: { url: string; key: string };
+    };
+    defaultSemesterDurationWeeks: number;
+  }
+  
+  export interface SemesterInfo {
+    number: number;
+    start: string;
+    end: string;
+  }
+  
+  export interface SessionConfig {
+    id: string;
     name: string;
-    directorate: string;
-    systemName: string;
+    startDate: string;
+    semesters: SemesterInfo[];
+  }
+  
+  export interface AuditLog {
+    id: string;
+    timestamp: string;
+    user: string;
+    role: UserRole;
+    action: string;
+    module: string;
+    details: string;
+    ip?: string;
+  }
+  
+  export interface DepartmentUser {
+    id: string;
+    name: string;
     email: string;
-    contact: string;
-    academicYear: string;
-    admissionSession: string;
-    logo?: string;
-  };
-  security: {
-    sessionTimeout: number;
-    maxLoginAttempts: number;
-    enableRecordLocking: boolean;
-    enableDeletion: boolean;
-  };
-  maintenance: {
-    version: string;
-    lastBackup: string;
-  };
-  milestones: {
-    gs2: { enabled: boolean };
-    synopsis: { enabled: boolean };
-    gs4: { enabled: boolean };
-    semiFinal: { enabled: boolean };
-    final: { enabled: boolean };
-    coe: { enabled: boolean };
-  };
-  databases: {
-    supabase: { url: string; key: string };
-  };
-  defaultSemesterDurationWeeks: number;
-}
-
-export interface SemesterInfo {
-  number: number;
-  start: string;
-  end: string;
-}
-
-export interface SessionConfig {
-  id: string;
-  name: string;
-  startDate: string;
-  semesters: SemesterInfo[];
-}
-
-export interface AuditLog {
-  id: string;
-  timestamp: string;
-  user: string;
-  role: UserRole;
-  action: string;
-  module: string;
-  details: string;
-  ip?: string;
-}
-
-export interface DepartmentUser {
-  id: string;
-  name: string;
-  email: string;
-  password?: string;
-  department: string;
-  lastLogin?: string;
-  createdAt?: string;
-}
-
-export interface DepartmentAuditLog {
-  id: string;
-  timestamp: string;
-  departmentUserId: string;
-  departmentUserName: string;
-  department: string;
-  action: string;
-  details: string;
-}
+    password?: string;
+    department: string;
+    departmentId: string;
+    lastLogin?: string;
+    createdAt?: string;
+  }
+  
+  export interface DepartmentAuditLog {
+    id: string;
+    timestamp: string;
+    departmentUserId: string;
+    departmentUserName: string;
+    department: string;
+    departmentId: string;
+    action: string;
+    details: string;
+  }
+  
+  export interface Department {
+    id: string;
+    name: string;
+  }
