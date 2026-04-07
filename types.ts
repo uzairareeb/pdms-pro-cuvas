@@ -174,3 +174,23 @@ export interface AuditLog {
   details: string;
   ip?: string;
 }
+
+export interface DepartmentUser {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  department: string;
+  lastLogin?: string;
+  createdAt?: string;
+}
+
+export interface DepartmentAuditLog {
+  id: string;
+  timestamp: string;
+  departmentUserId: string;
+  departmentUserName: string;
+  department: string;
+  action: string;
+  details: string;
+}

@@ -901,6 +901,123 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
     }
   });
 
+  // ── Department Users CRUD ─────────────────────────────────────────────────
+  app.get("/api/supabase/department-users", async (req, res) => {
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('department_users').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      const mapped = (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        password: u.password,
+        department: u.department,
+        lastLogin: u.last_login,
+        createdAt: u.created_at,
+      }));
+      return res.json({ success: true, data: mapped });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/supabase/department-users/add", async (req, res) => {
+    const { user } = req.body;
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('department_users').insert([{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        department: user.department,
+        created_at: new Date().toISOString(),
+      }]);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/supabase/department-users/update", async (req, res) => {
+    const { user } = req.body;
+    try {
+      const supabase = getSupabaseClient();
+      const updatePayload: any = { name: user.name, department: user.department };
+      if (user.password) updatePayload.password = user.password;
+      const { error } = await supabase.from('department_users').update(updatePayload).eq('id', user.id);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/supabase/department-users/delete", async (req, res) => {
+    const { id } = req.body;
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('department_users').delete().eq('id', id);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/supabase/department-users/login", async (req, res) => {
+    const { email, password } = req.body;
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('department_users').select('*').eq('email', email).eq('password', password).single();
+      if (error || !data) return res.json({ success: false, message: 'Invalid email or password.' });
+      // Update last login
+      await supabase.from('department_users').update({ last_login: new Date().toISOString() }).eq('id', data.id);
+      return res.json({
+        success: true, user: {
+          id: data.id, name: data.name, email: data.email,
+          department: data.department, lastLogin: new Date().toISOString()
+        }
+      });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // ── Department Audit Logs ─────────────────────────────────────────────────
+  app.get("/api/supabase/department-audit-logs", async (req, res) => {
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.from('department_audit_logs').select('*').order('timestamp', { ascending: false }).limit(500);
+      if (error) throw error;
+      return res.json({ success: true, data: data || [] });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/supabase/department-audit-logs/add", async (req, res) => {
+    const { log } = req.body;
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('department_audit_logs').insert([{
+        id: log.id,
+        timestamp: log.timestamp,
+        department_user_id: log.departmentUserId,
+        department_user_name: log.departmentUserName,
+        department: log.department,
+        action: log.action,
+        details: log.details,
+      }]);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
   // Vite middleware for development (local only)
   if (!isVercel && process.env.NODE_ENV !== "production") {
     try {

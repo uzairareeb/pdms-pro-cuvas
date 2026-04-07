@@ -129,9 +129,14 @@ const Login: React.FC = () => {
             </form>
 
 
-
-            <div className="text-center">
-
+            <div className="text-center mt-6">
+              <button 
+                type="button"
+                onClick={() => navigate('/department-login')}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                Go to Department Portal Login →
+              </button>
             </div>
           </motion.div>
         </div>

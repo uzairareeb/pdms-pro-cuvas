@@ -889,22 +889,38 @@ const StudentPortal: React.FC = () => {
                                             <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] flex items-center gap-2">
                                               <ShieldCheck size={14} /> Official Research Title
                                             </p>
-                                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-md text-[8px] font-black uppercase tracking-tighter">Extracted from PDF</span>
+                                            <button 
+                                              onClick={() => {
+                                                const newTitle = prompt("Edit Thesis Title:", thesisTitle);
+                                                if (newTitle) setThesisTitle(newTitle);
+                                              }}
+                                              className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-md text-[8px] font-black uppercase tracking-tighter hover:bg-indigo-600 hover:text-white transition-all">
+                                              Edit Manually
+                                            </button>
                                           </div>
                                           <p className="text-sm font-bold text-slate-800 leading-relaxed tracking-tight break-words">
                                             "{thesisTitle}"
                                           </p>
-                                          <p className="mt-3 text-[9px] text-slate-400 font-medium leading-normal">
-                                            Please verify if the title matches your research exactly. If not, you can re-upload your document.
+                                          <p className="mt-3 text-[9px] text-slate-400 font-medium leading-normal italic">
+                                            Please verify accuracy above. You can manually correct any typos before finalizing.
                                           </p>
                                         </div>
                                       </div>
                                     ) : (
-                                      extractingTitle && (
+                                      extractingTitle ? (
                                         <div className="mt-5 p-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-3 animate-pulse">
                                           <Loader2 size={16} className="text-indigo-400 animate-spin" />
                                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Analyzing PDF Schema...</span>
                                         </div>
+                                      ) : (
+                                        <button 
+                                          onClick={() => {
+                                            const newTitle = prompt("Enter Thesis Title:");
+                                            if (newTitle) setThesisTitle(newTitle);
+                                          }}
+                                          className="mt-5 w-full p-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-black text-[10px] uppercase tracking-widest hover:border-indigo-400 hover:text-indigo-600 transition-all">
+                                          Title not found? Click to enter manually
+                                        </button>
                                       )
                                     )}
                                   </div>

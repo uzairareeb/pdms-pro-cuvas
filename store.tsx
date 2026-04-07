@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
-  Student, SystemSettings, AuditLog, StudentStatus, Gender, StaffUser, RolePermissions, SessionConfig, ValidationStatus, ModulePermissions, UserRole
+  Student, SystemSettings, AuditLog, StudentStatus, Gender, StaffUser, RolePermissions, SessionConfig, ValidationStatus, ModulePermissions, UserRole, DepartmentUser, DepartmentAuditLog
 } from './types';
 
 interface Notification {
@@ -26,7 +26,6 @@ interface AppContextType {
   isLoading: boolean;
   error: string | null;
   reviewedCriticalActions: string[];
-  /** True briefly after successful login until post-login branded gate completes */
   justLoggedIn: boolean;
   completePostLoginSession: () => void;
   notify: (message: string, type: 'success' | 'error') => void;
@@ -51,6 +50,16 @@ interface AppContextType {
   markActionAsReviewed: (id: string) => void;
   sendReminder: (id: string, item?: string) => void;
   setupDatabase: () => Promise<void>;
+  // Department Portal
+  departmentUsers: DepartmentUser[];
+  currentDeptUser: DepartmentUser | null;
+  departmentAuditLogs: DepartmentAuditLog[];
+  deptLogin: (email: string, password: string) => Promise<boolean>;
+  deptLogout: () => void;
+  addDepartmentUser: (user: Omit<DepartmentUser, 'id'>) => Promise<void>;
+  updateDepartmentUser: (user: DepartmentUser) => Promise<void>;
+  deleteDepartmentUser: (id: string) => Promise<void>;
+  logDeptAction: (action: string, details: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -184,6 +193,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [reviewedCriticalActions, setReviewedCriticalActions] = useState<string[]>(() => 
     JSON.parse(localStorage.getItem('das_reviewed_actions') || '[]')
   );
+  const [departmentUsers, setDepartmentUsers] = useState<DepartmentUser[]>([]);
+  const [currentDeptUser, setCurrentDeptUser] = useState<DepartmentUser | null>(() => {
+    const saved = localStorage.getItem('dept_user_obj');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [departmentAuditLogs, setDepartmentAuditLogs] = useState<DepartmentAuditLog[]>([]);
 
   const fetchInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -223,7 +238,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           { key: 'settings', url: '/api/supabase/settings' },
           { key: 'staff', url: '/api/supabase/staff' },
           { key: 'logs', url: '/api/supabase/audit-logs' },
-          { key: 'sessions', url: '/api/supabase/sessions' }
+          { key: 'sessions', url: '/api/supabase/sessions' },
+          { key: 'deptUsers', url: '/api/supabase/department-users' },
+          { key: 'deptLogs', url: '/api/supabase/department-audit-logs' },
         ];
 
         const results: any = {};
@@ -235,7 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (text.includes("Rate exceeded")) {
               throw new Error(`Rate limit exceeded while fetching ${endpoint.key}.`);
             }
-            continue; // Skip this one if it failed but not a rate limit
+            continue;
           }
           results[endpoint.key] = await res.json();
         }
@@ -253,6 +270,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (results.staff?.success) setStaff(results.staff.data);
         if (results.logs?.success) setAuditLogs(results.logs.data);
         if (results.sessions?.success) setSessions(results.sessions.data);
+        if (results.deptUsers?.success) setDepartmentUsers(results.deptUsers.data);
+        if (results.deptLogs?.success) setDepartmentAuditLogs(results.deptLogs.data);
       }
     } catch (err: any) {
       console.error("Error fetching initial data:", err);
@@ -700,6 +719,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ── Department Portal Functions ────────────────────────────────────────────
+  const deptLogin = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/supabase/department-users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setCurrentDeptUser(data.user);
+        localStorage.setItem('dept_user_obj', JSON.stringify(data.user));
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const deptLogout = () => {
+    setCurrentDeptUser(null);
+    localStorage.removeItem('dept_user_obj');
+  };
+
+  const addDepartmentUser = async (data: Omit<DepartmentUser, 'id'>) => {
+    const newUser: DepartmentUser = { ...data, id: 'du' + Math.random().toString(36).substr(2, 8) };
+    if (isDatabaseConnected) {
+      const res = await fetch('/api/supabase/department-users/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: newUser })
+      });
+      const payload = await res.json();
+      if (!payload.success) throw new Error(payload.message);
+    }
+    setDepartmentUsers(prev => [newUser, ...prev]);
+  };
+
+  const updateDepartmentUser = async (updated: DepartmentUser) => {
+    if (isDatabaseConnected) {
+      const res = await fetch('/api/supabase/department-users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: updated })
+      });
+      const payload = await res.json();
+      if (!payload.success) throw new Error(payload.message);
+    }
+    setDepartmentUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+  };
+
+  const deleteDepartmentUser = async (id: string) => {
+    if (isDatabaseConnected) {
+      const res = await fetch('/api/supabase/department-users/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const payload = await res.json();
+      if (!payload.success) throw new Error(payload.message);
+    }
+    setDepartmentUsers(prev => prev.filter(u => u.id !== id));
+  };
+
+  const logDeptAction = async (action: string, details: string) => {
+    if (!currentDeptUser) return;
+    const newLog: DepartmentAuditLog = {
+      id: 'DL' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+      timestamp: new Date().toISOString(),
+      departmentUserId: currentDeptUser.id,
+      departmentUserName: currentDeptUser.name,
+      department: currentDeptUser.department,
+      action,
+      details,
+    };
+    if (isDatabaseConnected) {
+      try {
+        await fetch('/api/supabase/department-audit-logs/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ log: newLog })
+        });
+      } catch (e) { /* silent */ }
+    }
+    setDepartmentAuditLogs(prev => [newLog, ...prev].slice(0, 1000));
+  };
+
   return (
     <AppContext.Provider value={{
       students,
@@ -788,7 +895,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       backupDatabase,
       markActionAsReviewed,
       sendReminder,
-      setupDatabase
+      setupDatabase,
+      departmentUsers,
+      currentDeptUser,
+      departmentAuditLogs,
+      deptLogin,
+      deptLogout,
+      addDepartmentUser,
+      updateDepartmentUser,
+      deleteDepartmentUser,
+      logDeptAction,
     }}>
       {children}
     </AppContext.Provider>
