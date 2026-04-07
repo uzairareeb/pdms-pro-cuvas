@@ -176,29 +176,4 @@ export interface RolePermissions {
     ip?: string;
   }
   
-  export interface DepartmentUser {
-    id: string;
-    name: string;
-    email: string;
-    password?: string;
-    department: string;
-    departmentId: string;
-    lastLogin?: string;
-    createdAt?: string;
-  }
   
-  export interface DepartmentAuditLog {
-    id: string;
-    timestamp: string;
-    departmentUserId: string;
-    departmentUserName: string;
-    department: string;
-    departmentId: string;
-    action: string;
-    details: string;
-  }
-  
-  export interface Department {
-    id: string;
-    name: string;
-  }

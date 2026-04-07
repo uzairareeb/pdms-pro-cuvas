@@ -30,7 +30,7 @@ import {
   Building2,
   RotateCcw
 } from 'lucide-react';
-import { StaffUser, ModulePermissions, UserRole, DepartmentUser } from '../types';
+import { StaffUser, ModulePermissions, UserRole } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MODULE_LIST = [
@@ -124,77 +124,15 @@ const FilterSelect = ({ label, value, icon: Icon, options, onChange }: any) => {
 };
 
 const UserManagement: React.FC = () => {
-  const { staff, addStaff, updateStaff, deleteStaff, currentUser, settings, notify, departmentUsers, addDepartmentUser, updateDepartmentUser, deleteDepartmentUser, allDepartments } = useStore();
-  const [activeTab, setActiveTab] = useState<'system'|'department'>('system');
+  const { staff, addStaff, updateStaff, deleteStaff, currentUser, settings, notify } = useStore();
   
-  // System states
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState<{id: string, name: string} | null>(null);
-  
-  // Department states
-  const [deptSearchTerm, setDeptSearchTerm] = useState('');
-  const [deptDeptFilter, setDeptDeptFilter] = useState('All');
-  const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
-  const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
-  const [deletingDeptUser, setDeletingDeptUser] = useState<{id: string, name: string} | null>(null);
-  const [deptFormData, setDeptFormData] = useState<Omit<DepartmentUser, 'id'>>({
-    name: '', 
-    email: '', 
-    password: '', 
-    department: allDepartments[0]?.name || '',
-    departmentId: allDepartments[0]?.id || ''
-  });
 
-  const filteredDeptUsers = useMemo(() => departmentUsers.filter(u => {
-    const minSearch = deptSearchTerm.toLowerCase();
-    const matchSearch = u.name.toLowerCase().includes(minSearch) || u.email.toLowerCase().includes(minSearch);
-    const matchDept = deptDeptFilter === 'All' || u.departmentId === deptDeptFilter;
-    return matchSearch && matchDept;
-  }), [departmentUsers, deptSearchTerm, deptDeptFilter]);
-
-  const handleDeptEdit = (u: DepartmentUser) => {
-    setEditingDeptId(u.id);
-    setDeptFormData({ 
-      name: u.name, 
-      email: u.email, 
-      password: u.password || '', 
-      department: u.department,
-      departmentId: u.departmentId
-    });
-    setIsDeptModalOpen(true);
-  };
-
-  const handleDeptSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingDeptId) {
-        await updateDepartmentUser({ ...deptFormData, id: editingDeptId } as DepartmentUser);
-        notify(`Department login for ${deptFormData.name} updated.`, 'success');
-      } else {
-        if (departmentUsers.some(u => u.email === deptFormData.email)) {
-          notify("A department user with this email already exists.", "error");
-          return;
-        }
-        await addDepartmentUser(deptFormData as Omit<DepartmentUser, 'id'>);
-        notify(`Department login for ${deptFormData.name} created.`, 'success');
-      }
-      setIsDeptModalOpen(false); setEditingDeptId(null);
-      setDeptFormData({ 
-        name: '', 
-        email: '', 
-        password: '', 
-        department: allDepartments[0]?.name || '',
-        departmentId: allDepartments[0]?.id || ''
-      });
-    } catch (err: any) {
-      notify(`Error saving department user: ${err.message}`, 'error');
-    }
-  };
-  
   const [formData, setFormData] = useState({
     username: '',
     name: '',
@@ -287,21 +225,7 @@ const UserManagement: React.FC = () => {
           </div>
         </div>
         <button 
-          onClick={() => {
-            if (activeTab === 'system') {
-              setEditingId(null); setIsModalOpen(true);
-            } else {
-              setEditingDeptId(null);
-              setDeptFormData({ 
-                name: '', 
-                email: '', 
-                password: '', 
-                department: allDepartments[0]?.name || '',
-                departmentId: allDepartments[0]?.id || ''
-              });
-              setIsDeptModalOpen(true);
-            }
-          }}
+          onClick={() => { setEditingId(null); setIsModalOpen(true); }}
           className="flex items-center justify-center gap-3 px-10 py-5 bg-[#0f172a] text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 group"
         >
           <UserPlus size={18} />
@@ -310,14 +234,7 @@ const UserManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* ── Tabs ────────────────────────────────────────────────────── */}
-      <div className="flex gap-2 p-1.5 bg-white border border-slate-200 rounded-2xl w-fit shadow-sm">
-        <button onClick={() => setActiveTab('system')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'system' ? 'bg-indigo-50 shadow-sm text-indigo-700' : 'text-slate-400 hover:text-slate-700'}`}><User size={14}/> System Users</button>
-        <button onClick={() => setActiveTab('department')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'department' ? 'bg-indigo-50 shadow-sm text-indigo-700' : 'text-slate-400 hover:text-slate-700'}`}><Building2 size={14}/> Department Users</button>
-      </div>
-
-      {activeTab === 'system' ? (
-        <div className="space-y-8">
+      <div className="space-y-8">
 
       {/* ── KPI Grid ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
@@ -464,86 +381,6 @@ const UserManagement: React.FC = () => {
         )}
       </div>
       </div>
-      ) : (
-      <div className="space-y-8">
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-8 flex flex-col md:flex-row items-end gap-6 relative overflow-hidden">
-          <div className="flex-1 w-full space-y-1.5">
-             <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Search Dept Users</label>
-             <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Name or email..." 
-                  value={deptSearchTerm} 
-                  onChange={e => setDeptSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-bold text-sm tracking-tight text-slate-900 transition-all placeholder:text-slate-300"
-                />
-             </div>
-          </div>
-          <FilterSelect 
-            label="Department" 
-            value={deptDeptFilter} 
-            icon={Building2} 
-            options={['All', ...allDepartments.map(d => d.id)]} 
-            onChange={setDeptDeptFilter} 
-            displayValue={deptDeptFilter === 'All' ? 'All Departments' : allDepartments.find(d => d.id === deptDeptFilter)?.name}
-          />
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dept User</th>
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</th>
-                <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100/60">
-                {filteredDeptUsers.length > 0 ? (
-                  filteredDeptUsers.map(user => (
-                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-10 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black text-sm">{user.name[0]}</div>
-                          <div className="min-w-0">
-                             <p className="text-sm font-black text-slate-900 tracking-tight leading-none">{user.name}</p>
-                             <p className="text-[10px] font-bold text-slate-400 mt-1.5">{user.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-10 py-6">
-                        <span className="px-4 py-1.5 rounded-xl text-[8.5px] font-black uppercase tracking-widest border border-slate-200 bg-slate-50 text-slate-500 flex items-center gap-2 w-fit">
-                          <Building2 size={12} /> {user.department}
-                        </span>
-                      </td>
-                      <td className="px-10 py-6 text-right">
-                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleDeptEdit(user)} className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 rounded-xl shadow-sm transition-all active:scale-90">
-                            <Edit2 size={16} />
-                          </button>
-                          <button onClick={() => setDeletingDeptUser({ id: user.id, name: user.name })} className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 rounded-xl shadow-sm transition-all active:scale-90">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={3} className="py-24 text-center">
-                      <div className="flex flex-col items-center gap-4">
-                        <UserX size={40} className="text-slate-200" />
-                        <p className="text-lg font-black text-slate-900 uppercase tracking-tight">No Department Users Found</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      )}
 
       {/* ── Provisioning Modal ─────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -655,69 +492,6 @@ const UserManagement: React.FC = () => {
                       <span>{editingId ? 'Commit Identities' : 'Activate Access Node'}</span>
                    </button>
                 </div>
-             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Dept Provisioning Modal ────────────────────────────────────────── */}
-      <AnimatePresence>
-        {isDeptModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={() => setIsDeptModalOpen(false)} />
-             <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-                <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50 backdrop-blur-md">
-                   <div>
-                      <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">{editingDeptId ? 'Update Dept User' : 'New Dept User'}</h3>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Department Portal Access</p>
-                   </div>
-                   <button onClick={() => setIsDeptModalOpen(false)} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-100 text-slate-300 hover:text-rose-500 rounded-xl transition-all shadow-sm active:scale-95"><X size={18} /></button>
-                </div>
-                
-                <form onSubmit={handleDeptSubmit} className="p-8 space-y-6">
-                   <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Coordinator Name</label>
-                      <div className="relative group">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
-                        <input required className="w-full pl-11 pr-5 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-bold text-sm text-slate-900 transition-all placeholder:text-slate-300" 
-                        value={deptFormData.name} onChange={e => setDeptFormData({...deptFormData, name: e.target.value})} placeholder="e.g. Dr. Ahmed" />
-                      </div>
-                   </div>
-                   <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Login Email</label>
-                      <div className="relative group">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
-                        <input required type="email" className="w-full pl-11 pr-5 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-bold text-sm text-slate-900 transition-all placeholder:text-slate-300"
-                        value={deptFormData.email} onChange={e => setDeptFormData({...deptFormData, email: e.target.value})} placeholder="dept@cuvas.edu.pk" disabled={!!editingDeptId} />
-                      </div>
-                   </div>
-                   <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Department</label>
-                      <div className="relative group">
-                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
-                        <select required className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-bold text-sm text-slate-900 appearance-none cursor-pointer transition-all"
-                        value={deptFormData.departmentId} onChange={e => {
-                          const dept = allDepartments.find(d => d.id === e.target.value);
-                          if (dept) setDeptFormData({...deptFormData, departmentId: dept.id, department: dept.name});
-                        }}>
-                          {allDepartments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300"><ChevronRight size={14} className="rotate-90" /></div>
-                      </div>
-                   </div>
-                   <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Passkey</label>
-                      <div className="relative group">
-                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={16} />
-                        <input required={!editingDeptId} type={showPassword ? "text" : "password"} className="w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 font-bold text-sm tracking-widest text-slate-900 transition-all placeholder:text-slate-300"
-                        value={deptFormData.password} onChange={e => setDeptFormData({...deptFormData, password: e.target.value})} placeholder={editingDeptId ? 'Unchanged unless modified' : '••••••••'} />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-600 transition-colors"><Eye size={16} /></button>
-                      </div>
-                   </div>
-                   <button type="submit" className="w-full py-4 mt-4 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3">
-                      <Save size={16} /> {editingDeptId ? 'Update Access Node' : 'Provision Dept User'}
-                   </button>
-                </form>
              </motion.div>
           </div>
         )}
