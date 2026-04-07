@@ -1,6 +1,13 @@
--- PDMS-PRO v4.0 Supabase Schema
+-- PDMS-PRO v4.0 Supabase Schema (Updated for Department Isolation)
 
--- 1. Students Table
+-- 1. Departments Table
+CREATE TABLE IF NOT EXISTS departments (
+  id TEXT PRIMARY KEY,
+  name TEXT UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Students Table
 CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
   sr_no TEXT,
@@ -13,6 +20,7 @@ CREATE TABLE IF NOT EXISTS students (
   degree TEXT,
   session TEXT,
   department TEXT,
+  department_id TEXT REFERENCES departments(id),
   programme TEXT,
   current_semester INTEGER,
   status TEXT,
@@ -38,14 +46,25 @@ CREATE TABLE IF NOT EXISTS students (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Settings Table
+-- 3. Department Users
+CREATE TABLE IF NOT EXISTS department_users (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  email TEXT UNIQUE,
+  password TEXT,
+  department TEXT,
+  department_id TEXT REFERENCES departments(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Settings Table
 CREATE TABLE IF NOT EXISTS settings (
   id TEXT PRIMARY KEY DEFAULT 'main_settings',
   data JSONB,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Staff Table
+-- 5. Staff Table
 CREATE TABLE IF NOT EXISTS staff (
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE,
@@ -56,7 +75,7 @@ CREATE TABLE IF NOT EXISTS staff (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Audit Logs Table
+-- 6. Audit Logs Table (Admin)
 CREATE TABLE IF NOT EXISTS audit_logs (
   id TEXT PRIMARY KEY,
   timestamp TIMESTAMPTZ DEFAULT NOW(),
@@ -65,7 +84,19 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   details TEXT
 );
 
--- 5. Sessions Table
+-- 7. Department Audit Logs
+CREATE TABLE IF NOT EXISTS department_audit_logs (
+  id TEXT PRIMARY KEY,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  department_user_id TEXT,
+  department_user_name TEXT,
+  department TEXT,
+  department_id TEXT,
+  action TEXT,
+  details TEXT
+);
+
+-- 8. Sessions Table
 CREATE TABLE IF NOT EXISTS sessions_config (
   id TEXT PRIMARY KEY,
   name TEXT,
@@ -74,17 +105,40 @@ CREATE TABLE IF NOT EXISTS sessions_config (
   is_active BOOLEAN DEFAULT FALSE
 );
 
--- Enable Row Level Security (RLS) - For now, we'll keep it simple for the user
--- But in production, you should add policies.
+-- Enable Row Level Security (RLS)
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE department_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE department_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Simple "Allow All" policies for demo purposes (NOT FOR PRODUCTION)
-CREATE POLICY "Allow all for anon" ON students FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON settings FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON staff FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON audit_logs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON sessions_config FOR ALL USING (true) WITH CHECK (true);
+-- In production, replace these with owner-specific or role-specific policies.
+CREATE POLICY "Allow all" ON students FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON staff FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON audit_logs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON sessions_config FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON departments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON department_users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON department_audit_logs FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. Initial Departments Data (Optional)
+INSERT INTO departments (id, name) VALUES 
+('dept-abg', 'Animal Breeding & Genetics'),
+('dept-an', 'Animal Nutrition'),
+('dept-bi', 'Bioinformatics'),
+('dept-ch', 'Chemistry'),
+('dept-fst', 'Food Science and Technology'),
+('dept-lm', 'Livestock Management'),
+('dept-mb', 'Microbiology'),
+('dept-pa', 'Pathology'),
+('dept-pt', 'Pharmacology & Toxicology'),
+('dept-ps', 'Poultry Science'),
+('dept-bc', 'Biochemistry'),
+('dept-fa', 'Fisheries & Aquiculture'),
+('dept-zo', 'Zoology')
+ON CONFLICT (name) DO NOTHING;
