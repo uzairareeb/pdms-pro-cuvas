@@ -15,7 +15,7 @@ const DepartmentPortal: React.FC = () => {
 
   useEffect(() => {
     if (!currentDeptUser) {
-      navigate('/dept-login');
+      navigate('/department-login');
     }
   }, [currentDeptUser, navigate]);
 
@@ -37,7 +37,7 @@ const DepartmentPortal: React.FC = () => {
 
   const handleLogout = () => {
     deptLogout();
-    navigate('/dept-login');
+    navigate('/department-login');
   };
 
   return (

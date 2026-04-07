@@ -22,7 +22,7 @@ const DepartmentLogin: React.FC = () => {
     setLoading(true);
     const ok = await deptLogin(email.trim(), password);
     setLoading(false);
-    if (ok) navigate('/dept-portal');
+    if (ok) navigate('/department-portal');
     else setError('Invalid credentials. Please check your email and password.');
   };
 

@@ -116,8 +116,8 @@ const AppRoutes = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route path="/login" element={<Login />} />
-        <Route path="/dept-login" element={<DepartmentLogin />} />
-        <Route path="/dept-portal" element={<DepartmentPortal />} />
+        <Route path="/department-login" element={<DepartmentLogin />} />
+        <Route path="/department-portal" element={<DepartmentPortal />} />
         <Route path="/" element={<ProtectedRoute module="Dashboard"><Dashboard /></ProtectedRoute>} />
         <Route path="/registration" element={<ProtectedRoute module="StudentRegistration" action="create"><StudentRegistration /></ProtectedRoute>} />
         <Route path="/records" element={<ProtectedRoute module="StudentRecords"><StudentRecords /></ProtectedRoute>} />
