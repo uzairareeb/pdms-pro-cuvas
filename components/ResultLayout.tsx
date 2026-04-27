@@ -26,10 +26,9 @@ const ResultLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const location = useLocation();
 
   const menuItems = [
-    { name: 'Portal Dashboard', icon: LayoutDashboard, path: '/result-admin' },
-    { name: 'Result Management', icon: BarChart3, path: '/result-admin/records' },
-    { name: 'Card Templates', icon: FileSpreadsheet, path: '/result-admin/templates' },
-    { name: 'System Settings', icon: SettingsIcon, path: '/settings/general' },
+    { name: 'Portal Dashboard', icon: LayoutDashboard, path: '/result-admin/dashboard' },
+    { name: 'Bulk Upload Results', icon: Upload, path: '/result-admin/upload' },
+    { name: 'Result Card Templates', icon: FileSpreadsheet, path: '/result-admin/templates' },
   ];
 
   return (

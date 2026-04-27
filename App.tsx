@@ -152,8 +152,9 @@ const AppRoutes = () => {
         <Route path="/result-check" element={<ResultCheck />} />
         
         {/* Standalone Result Admin Portal */}
-        <Route path="/result-admin" element={<ResultProtectedRoute><ResultManagement /></ResultProtectedRoute>} />
-        <Route path="/result-admin/records" element={<ResultProtectedRoute><ResultManagement /></ResultProtectedRoute>} />
+        <Route path="/result-admin" element={<Navigate to="/result-admin/dashboard" replace />} />
+        <Route path="/result-admin/dashboard" element={<ResultProtectedRoute><ResultManagement /></ResultProtectedRoute>} />
+        <Route path="/result-admin/upload" element={<ResultProtectedRoute><ResultManagement /></ResultProtectedRoute>} />
         <Route path="/result-admin/templates" element={<ResultProtectedRoute><ResultManagement /></ResultProtectedRoute>} />
         
         <Route path="*" element={<Navigate to="/" replace />} />
