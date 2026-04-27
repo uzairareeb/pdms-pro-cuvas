@@ -71,16 +71,6 @@ const StudentLogin: React.FC = () => {
       return;
     }
 
-    // Eligibility check: gs4Form must be exactly 'Submitted' or 'Approved'
-    // (mirrors the ThesisTracking logic — gs4Form is the thesis submission status field)
-    const thesisStatus = (student.gs4Form || '').trim();
-    const isEligible = thesisStatus === 'Submitted' || thesisStatus === 'Approved';
-
-    if (!isEligible) {
-      setError('You are not eligible to upload thesis at this stage.');
-      return;
-    }
-
     // NEW: Save student state for dashboard
     localStorage.setItem('cas_student_user', JSON.stringify(student));
     

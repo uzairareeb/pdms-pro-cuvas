@@ -227,7 +227,7 @@ const Dashboard: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ y: -5, scale: 1.005 }}
-        onClick={() => navigate('/student-login')}
+        onClick={() => window.open('/#/student-login', '_blank')}
         className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-indigo-950 rounded-3xl p-8 shadow-xl cursor-pointer border border-white/5 group no-print"
       >
         <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
@@ -592,6 +592,14 @@ const Dashboard: React.FC = () => {
               {currentRole?.canViewAudit && <QuickBtn icon={History}   label="Audit Trail"       path="/audit"        navigate={navigate} />}
               <QuickBtn icon={BookOpen}      label="Synopsis"          path="/synopsis-submission" navigate={navigate} />
               <QuickBtn icon={ClipboardList} label="Thesis Tracking"  path="/thesis-tracking" navigate={navigate} />
+              <button 
+                onClick={() => window.open('/#/student-login', '_blank')}
+                className="flex items-center gap-3 p-4 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 rounded-xl border border-slate-200 hover:border-indigo-200 transition-all shadow-sm active:scale-95 w-full group"
+              >
+                <GraduationCap size={15} className="text-indigo-600 shrink-0 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Student Portal</span>
+                <ChevronRight size={12} className="ml-auto text-slate-300 group-hover:text-indigo-400" />
+              </button>
 
             </div>
           </div>

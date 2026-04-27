@@ -748,6 +748,26 @@ const StudentPortal: React.FC = () => {
 
                     {/* Content Area */}
                     <div className="flex-1 flex flex-col">
+                      {/* Eligibility Check: Semester 4 or above */}
+                      {(student.currentSemester || 0) < 4 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 space-y-6">
+                          <div className="w-20 h-20 bg-rose-50 rounded-3xl flex items-center justify-center">
+                            <ShieldAlert size={40} className="text-rose-500" />
+                          </div>
+                          <div className="space-y-2">
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Submission Locked</h3>
+                            <p className="text-slate-500 text-sm font-medium max-w-sm mx-auto leading-relaxed">
+                              You are currently in <span className="text-indigo-600 font-bold">Semester {student.currentSemester || 1}</span>. 
+                              Thesis submission is only permitted for students in <span className="text-slate-900 font-bold">Semester 4 or above</span>.
+                            </p>
+                          </div>
+                          <div className="px-6 py-3 bg-slate-100 rounded-xl">
+                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                               Eligibility Status: <span className="text-rose-500">Not Eligible Yet</span>
+                             </p>
+                          </div>
+                        </div>
+                      ) : (
                       <AnimatePresence mode="wait">
 
                         {/* STEP 1: SELECT */}
@@ -990,12 +1010,13 @@ const StudentPortal: React.FC = () => {
                         )}
 
                       </AnimatePresence>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
-            </motion.div>
-          )}
+            </div>
+          </motion.div>
+        )}
 
         </AnimatePresence>
       </main>
