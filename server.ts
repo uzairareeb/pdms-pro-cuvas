@@ -594,8 +594,76 @@ async function startServer() {
           fileSizeLimit: 2097152 // 2MB
         });
       }
+      // Ensure storage policies for public access
+      await ensureStudentProfileMigration();
     } catch (e) {
       console.error("Profile picture bucket check failed:", e);
+    }
+  };
+
+  const ensureStudentProfileMigration = async () => {
+    try {
+      const config = getStoredConfig();
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.serviceKey || config.key;
+      const supabaseUrl = config.url;
+      if (!supabaseUrl || !serviceKey) return;
+
+      const sqlQuery = `
+        -- 1. Ensure profile_picture_url column exists in students table
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='students' AND column_name='profile_picture_url') THEN
+            ALTER TABLE students ADD COLUMN profile_picture_url TEXT;
+          END IF;
+        END $$;
+
+        -- 2. Ensure storage policies for profile-pictures bucket
+        -- Note: bucket_id is 'profile-pictures'
+        INSERT INTO storage.buckets (id, name, public)
+        VALUES ('profile-pictures', 'profile-pictures', true)
+        ON CONFLICT (id) DO UPDATE SET public = true;
+
+        -- Allow public read access to the profile-pictures bucket
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies 
+            WHERE tablename = 'objects' 
+            AND schemaname = 'storage' 
+            AND policyname = 'Public Access for Profile Pictures'
+          ) THEN
+            CREATE POLICY "Public Access for Profile Pictures" ON storage.objects
+            FOR SELECT USING (bucket_id = 'profile-pictures');
+          END IF;
+        END $$;
+
+        -- Allow authenticated uploads/updates via service role (already works)
+        -- But let's add a general service role policy just in case
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies 
+            WHERE tablename = 'objects' 
+            AND schemaname = 'storage' 
+            AND policyname = 'Service Role Full Access'
+          ) THEN
+            CREATE POLICY "Service Role Full Access" ON storage.objects
+            FOR ALL TO service_role USING (true) WITH CHECK (true);
+          END IF;
+        END $$;
+      `;
+
+      await fetch(`${supabaseUrl}/rest/v1/rpc/exec`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`
+        },
+        body: JSON.stringify({ sql: sqlQuery })
+      });
+    } catch (e) {
+      console.error("Student profile migration failed:", e);
     }
   };
 
@@ -1020,6 +1088,10 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
       error: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message 
     });
   });
+
+  // Run migrations on startup
+  void ensureProfilePictureBucket();
+  void ensureThesisTable();
 
   return app;
 }
