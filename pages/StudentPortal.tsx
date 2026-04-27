@@ -6,7 +6,7 @@ import {
   IdCard, BookMarked, FileCheck2, CloudUpload, FileBadge,
   ArrowRight, User, LayoutDashboard, ClipboardList,
   Download, Mail, Building2, Target, ChevronRight,
-  Calendar, Award, Layers, RefreshCcw, ShieldCheck, Lock
+  Calendar, Award, Layers, ShieldCheck, Lock, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateStudentProfilePDF } from '../utils/pdfExport';
@@ -756,22 +756,23 @@ const StudentPortal: React.FC = () => {
                         
                         if (semNum < 4) {
                           return (
-                            <div className="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center p-12 text-center">
-                              <div className="max-w-md space-y-8">
-                                <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto">
-                                  <ShieldAlert size={40} className="text-slate-300" />
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-50 flex flex-col items-center justify-center p-12 text-center rounded-2xl">
+                              <div className="max-w-md space-y-8 bg-white p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 relative overflow-hidden">
+                                <div className="absolute top-0 inset-x-0 h-1.5 bg-rose-500" />
+                                <div className="w-20 h-20 bg-rose-50 rounded-3xl flex items-center justify-center mx-auto">
+                                  <ShieldAlert size={40} className="text-rose-500" />
                                 </div>
                                 <div className="space-y-4">
-                                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Access Restricted</h3>
-                                  <p className="text-slate-500 text-sm font-bold leading-relaxed">
+                                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Submission Restricted</h3>
+                                  <p className="text-slate-600 text-sm font-bold leading-relaxed">
                                     “You are not allowed to submit your thesis yet. Please contact the Directorate of Advanced Studies for further information.”
                                   </p>
                                 </div>
                                 <div className="pt-6 border-t border-slate-100">
                                   <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
-                                    Current Status: <span className="text-indigo-600">Semester {semNum || student.currentSemester}</span>
+                                    Requirement: <span className="text-rose-600">Semester 4 Minimum</span>
                                   </p>
-                                  <p className="text-[9px] text-slate-300 mt-1 uppercase tracking-widest font-bold">Eligibility Begins: Semester 4</p>
+                                  <p className="text-[9px] text-slate-300 mt-1 uppercase tracking-widest font-bold">Your Status: Semester {semNum || student.currentSemester}</p>
                                 </div>
                               </div>
                             </div>
@@ -1028,7 +1029,9 @@ const StudentPortal: React.FC = () => {
               </div>
             </div>
           </motion.div>
-        )}
+          )}
+
+
 
         </AnimatePresence>
       </main>
