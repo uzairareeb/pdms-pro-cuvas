@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS students (
   validation_status TEXT,
   validation_date TEXT,
   comments TEXT,
+  profile_picture_url TEXT,
   is_locked BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

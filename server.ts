@@ -15,6 +15,7 @@ async function startServer() {
  
   // Centralized Bucket Configuration (Case-Sensitive fix for Supabase)
   const THESIS_BUCKET = 'thesis-files';
+  const PROFILE_PICTURE_BUCKET = 'profile-pictures';
 
   const getStoredConfig = () => {
     try {
@@ -249,6 +250,7 @@ async function startServer() {
           validationDate: s.validation_date,
           comments: s.comments,
           isLocked: s.is_locked,
+          profilePictureUrl: s.profile_picture_url || null,
           filePath: sub?.file_path || null,
           isUploaded: sub?.is_uploaded || false,
           submissionDate: sub?.uploaded_at || null,
@@ -299,6 +301,7 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
+        profile_picture_url: student.profilePictureUrl || null,
         is_locked: student.isLocked || false,
         // Note: file_path and is_uploaded are in thesis_submissions table, NOT students table
       };
@@ -396,6 +399,7 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
+        profile_picture_url: student.profilePictureUrl,
         is_locked: student.isLocked,
         // Note: file_path and is_uploaded live in thesis_submissions, NOT students
       }).eq('id', student.id);
@@ -579,6 +583,22 @@ async function startServer() {
     }
   };
 
+  const ensureProfilePictureBucket = async () => {
+    try {
+      const supabase = getServiceClient();
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const exists = buckets?.some(b => b.name === PROFILE_PICTURE_BUCKET);
+      if (!exists) {
+        await supabase.storage.createBucket(PROFILE_PICTURE_BUCKET, {
+          public: true,
+          fileSizeLimit: 2097152 // 2MB
+        });
+      }
+    } catch (e) {
+      console.error("Profile picture bucket check failed:", e);
+    }
+  };
+
   const ensureThesisTable = async () => {
     try {
       const supabase = getServiceClient();
@@ -691,6 +711,54 @@ async function startServer() {
       });
     } catch (error: any) {
       console.error("Thesis upload error:", error);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/student/upload-profile-picture", async (req, res) => {
+    const { cnic, fileData } = req.body;
+    try {
+      if (!cnic || !fileData) throw new Error("CNIC and fileData are required");
+      
+      await ensureProfilePictureBucket();
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      const supabase = getServiceClient();
+ 
+      // Decode base64
+      const base64Data = fileData.split(';base64,').pop();
+      if (!base64Data) throw new Error("Invalid file data");
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // Upload to Supabase Storage
+      const fileName = `${normalizedCnic}_profile.jpg`;
+      const { data, error } = await supabase.storage
+        .from(PROFILE_PICTURE_BUCKET)
+        .upload(fileName, buffer, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+ 
+      if (error) throw new Error(error.message);
+ 
+      const { data: urlData } = supabase.storage
+        .from(PROFILE_PICTURE_BUCKET)
+        .getPublicUrl(fileName);
+
+      // Update student table with the URL
+      const { error: updateError } = await supabase
+        .from('students')
+        .update({ profile_picture_url: urlData.publicUrl })
+        .eq('cnic', cnic);
+
+      if (updateError) throw new Error(updateError.message);
+
+      return res.json({
+        success: true,
+        message: "Profile picture uploaded successfully!",
+        publicUrl: urlData.publicUrl
+      });
+    } catch (error: any) {
+      console.error("Profile picture upload error:", error);
       return res.status(400).json({ success: false, message: error.message });
     }
   });

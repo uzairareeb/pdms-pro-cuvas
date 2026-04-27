@@ -6,7 +6,7 @@ import {
   IdCard, BookMarked, FileCheck2, CloudUpload, FileBadge,
   ArrowRight, User, LayoutDashboard, ClipboardList,
   Download, Mail, Building2, Target, ChevronRight,
-  Calendar, Award, Layers, ShieldCheck, Lock, ShieldAlert
+  Calendar, Award, Layers, ShieldCheck, Lock, ShieldAlert, Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateStudentProfilePDF } from '../utils/pdfExport';
@@ -131,6 +131,8 @@ const StudentPortal: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [thesisTitle, setThesisTitle] = useState<string | null>(null);
   const [extractingTitle, setExtractingTitle] = useState(false);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   const checkUploadStatus = useCallback(async (st: any) => {
     setLoading(true);
@@ -251,6 +253,50 @@ const StudentPortal: React.FC = () => {
       } else throw new Error(data.message || 'Permission error, contact admin');
     } catch (err: any) { setError(err.message); }
     finally { setFinalizing(false); }
+  };
+
+  const handleProfilePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !student) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files are allowed for profile pictures.');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Profile picture must be less than 2MB.');
+      return;
+    }
+
+    setIsUploadingProfile(true);
+    setError(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        try {
+          const res = await fetch('/api/student/upload-profile-picture', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cnic: student.cnic, fileData: base64Data })
+          });
+          const data = await res.json();
+          if (data.success) {
+            const updated = { ...student, profilePictureUrl: data.publicUrl };
+            setStudent(updated);
+            localStorage.setItem('cas_student_user', JSON.stringify(updated));
+            setError(null);
+          } else throw new Error(data.message || 'Upload failed.');
+        } catch (err: any) { setError(err.message); }
+        finally { setIsUploadingProfile(false); }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setError('Failed to process image.');
+      setIsUploadingProfile(false);
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -549,8 +595,33 @@ const StudentPortal: React.FC = () => {
                 <div className="lg:col-span-4 space-y-6">
                   <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
                     <div className="absolute top-0 inset-x-0 h-1.5 bg-indigo-600" />
-                    <div className="w-28 h-28 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-6 mt-2 shadow-sm">
-                      <User size={48} className="text-slate-200" />
+                    <div className="relative group/avatar">
+                      <div className="w-28 h-28 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-6 mt-2 shadow-sm overflow-hidden">
+                        {student.profilePictureUrl ? (
+                          <img src={student.profilePictureUrl} alt={student.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={48} className="text-slate-200" />
+                        )}
+                        {isUploadingProfile && (
+                          <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center backdrop-blur-[1px] mb-6 mt-2 rounded-2xl">
+                            <Loader2 size={24} className="text-white animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => profilePicInputRef.current?.click()}
+                        disabled={isUploadingProfile}
+                        className="absolute bottom-4 -right-2 p-2 bg-white border border-slate-200 rounded-xl text-indigo-600 shadow-lg hover:bg-indigo-50 transition-all active:scale-95 group-hover/avatar:scale-110"
+                      >
+                        <Camera size={16} />
+                      </button>
+                      <input 
+                        type="file" 
+                        ref={profilePicInputRef} 
+                        onChange={handleProfilePictureUpload} 
+                        accept="image/*" 
+                        className="hidden" 
+                      />
                     </div>
                     <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight uppercase">{student.name}</h2>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">

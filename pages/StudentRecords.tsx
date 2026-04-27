@@ -335,12 +335,18 @@ const StudentRecords: React.FC = () => {
                     {/* Student Name + Reg */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3.5">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm shrink-0 transition-all ${
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-sm shrink-0 transition-all overflow-hidden ${
                           student.isLocked ? 'bg-amber-100 text-amber-600' :
                           isPreviewed      ? 'bg-indigo-600 text-white' :
                           'bg-slate-100 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600'
                         }`}>
-                          {student.isLocked ? <Lock size={15} /> : student.name[0]}
+                          {student.isLocked ? <Lock size={15} /> : (
+                            student.profilePictureUrl ? (
+                              <img src={student.profilePictureUrl} alt={student.name} className="w-full h-full object-cover" />
+                            ) : (
+                              student.name[0]
+                            )
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-black text-slate-900 truncate leading-none">{student.name}</p>
@@ -485,10 +491,16 @@ const StudentRecords: React.FC = () => {
               <div className="flex-1 overflow-y-auto">
                 {/* Avatar */}
                 <div className="p-8 flex flex-col items-center text-center gap-4 border-b border-slate-50">
-                  <div className={`w-24 h-24 rounded-2xl flex items-center justify-center font-black text-3xl shadow-md ${
+                  <div className={`w-24 h-24 rounded-2xl flex items-center justify-center font-black text-3xl shadow-md overflow-hidden ${
                     previewStudent.isLocked ? 'bg-amber-100 text-amber-600' : 'bg-indigo-600 text-white'
                   }`}>
-                    {previewStudent.isLocked ? <Lock size={36} /> : previewStudent.name[0]}
+                    {previewStudent.isLocked ? <Lock size={36} /> : (
+                      previewStudent.profilePictureUrl ? (
+                        <img src={previewStudent.profilePictureUrl} alt={previewStudent.name} className="w-full h-full object-cover" />
+                      ) : (
+                        previewStudent.name[0]
+                      )
+                    )}
                   </div>
                   <div>
                     <h2 className="text-lg font-black text-slate-900 tracking-tight leading-tight">{previewStudent.name}</h2>

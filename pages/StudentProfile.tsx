@@ -168,8 +168,12 @@ const StudentProfile: React.FC = () => {
         <div className="lg:col-span-4 space-y-8">
           <div className="bg-white dark:bg-slate-900 p-10 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
              <div className="absolute top-0 inset-x-0 h-1.5 bg-indigo-600 transition-all" />
-             <div className="w-32 h-32 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden p-2 mb-6 shadow-sm transition-transform group-hover:scale-105 duration-500">
-               <User className="text-slate-200 dark:text-slate-700" size={48} />
+             <div className="w-32 h-32 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden mb-6 mt-2 shadow-sm transition-transform group-hover:scale-105 duration-500">
+               {student.profilePictureUrl ? (
+                 <img src={student.profilePictureUrl} alt={student.name} className="w-full h-full object-cover" />
+               ) : (
+                 <User className="text-slate-200 dark:text-slate-700" size={48} />
+               )}
              </div>
              <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">{student.name}</h2>
              <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-3 px-5 py-2 bg-slate-50 dark:bg-slate-800 rounded-full border border-slate-100 dark:border-white/5">

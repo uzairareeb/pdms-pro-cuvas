@@ -66,6 +66,7 @@ export interface Student {
   isLocked: boolean;
   filePath?: string;
   isUploaded?: boolean;
+  profilePictureUrl?: string;
   publicUrl?: string | null;
   submissionDate?: string | null;
 }
