@@ -222,6 +222,57 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
+      {/* Student Portal Access Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -5, scale: 1.005 }}
+        onClick={() => navigate('/student-login')}
+        className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-indigo-950 rounded-3xl p-8 shadow-xl cursor-pointer border border-white/5 group no-print"
+      >
+        <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
+          <GraduationCap size={200} className="text-white" />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="space-y-5">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-indigo-500/10 rounded-full border border-indigo-500/20">
+              <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
+              <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Public Access Portal</span>
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-white tracking-tight leading-none uppercase">Scholar Portal</h2>
+              <p className="text-indigo-200/60 text-sm font-medium mt-3 max-w-xl">
+                The centralized portal for postgraduate scholars to upload thesis documents, 
+                track academic milestones, and manage research profiles securely.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 pt-1">
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
+                <User size={14} className="text-indigo-400" />
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Student Login</span>
+              </div>
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
+                <ShieldAlert size={14} className="text-emerald-400" />
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Biometric Verification</span>
+              </div>
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
+                <Zap size={14} className="text-amber-400" />
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Instant Sync</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-6 shrink-0">
+            <div className="hidden lg:block h-16 w-px bg-white/10 mx-2" />
+            <button className="px-10 py-5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-indigo-600/40 group-hover:bg-indigo-500 group-hover:scale-105 transition-all active:scale-95 whitespace-nowrap">
+              Enter Student Portal →
+            </button>
+          </div>
+        </div>
+        
+        {/* Subtle decorative elements */}
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent opacity-30" />
+      </motion.div>
+
 
       {/* ── KPI Row 1: Primary Metrics ── */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
