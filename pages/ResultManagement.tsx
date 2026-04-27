@@ -21,16 +21,27 @@ interface ResultTemplate {
   createdAt: string;
 }
 
+import { useNavigate, useLocation } from 'react-router-dom';
+
 const ResultManagement: React.FC = () => {
   const { students, notify } = useStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   const [results, setResults] = useState<StudentResult[]>([]);
   const [templates, setTemplates] = useState<ResultTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'records' | 'templates'>('records');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingResult, setEditingResult] = useState<StudentResult | null>(null);
+
+  // Sync tab with URL
+  const activeTab = location.pathname.includes('/templates') ? 'templates' : 'records';
+  
+  const setActiveTab = (tab: 'records' | 'templates') => {
+    navigate(tab === 'templates' ? '/result-admin/templates' : '/result-admin/records');
+  };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateInputRef = useRef<HTMLInputElement>(null);

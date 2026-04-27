@@ -111,6 +111,17 @@ const ProtectedRoute: React.FC<{
   return <Layout>{children}</Layout>;
 };
 
+import ResultLayout from './components/ResultLayout';
+
+const ResultProtectedRoute: React.FC<{ 
+  children: React.ReactNode; 
+}> = ({ children }) => {
+  const { currentUser } = useStore();
+  if (!currentUser) return <Navigate to="/login" replace />;
+  if (currentUser.role !== 'Admin') return <Navigate to="/" replace />;
+  return <ResultLayout>{children}</ResultLayout>;
+};
+
 const AppRoutes = () => {
   const location = useLocation();
   
@@ -139,7 +150,12 @@ const AppRoutes = () => {
         <Route path="/settings/sessions" element={<ProtectedRoute module="Settings"><SessionSettings /></ProtectedRoute>} />
         <Route path="/mobile-app" element={<ProtectedRoute><MobileApp /></ProtectedRoute>} />
         <Route path="/result-check" element={<ResultCheck />} />
-        <Route path="/result-management" element={<ProtectedRoute module="StudentRecords"><ResultManagement /></ProtectedRoute>} />
+        
+        {/* Standalone Result Admin Portal */}
+        <Route path="/result-admin" element={<ResultProtectedRoute><ResultManagement /></ResultProtectedRoute>} />
+        <Route path="/result-admin/records" element={<ResultProtectedRoute><ResultManagement /></ResultProtectedRoute>} />
+        <Route path="/result-admin/templates" element={<ResultProtectedRoute><ResultManagement /></ResultProtectedRoute>} />
+        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

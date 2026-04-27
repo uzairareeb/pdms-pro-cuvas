@@ -317,7 +317,7 @@ const Dashboard: React.FC = () => {
               Check Results
             </button>
             <button 
-              onClick={() => window.open('/#/result-management', '_blank', 'noopener,noreferrer')}
+              onClick={() => window.open('/#/result-admin', '_blank', 'noopener,noreferrer')}
               className="w-full sm:w-auto px-10 py-5 bg-emerald-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/40 hover:bg-emerald-500 hover:scale-105 transition-all active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
             >
               <BarChart3 size={16} />
