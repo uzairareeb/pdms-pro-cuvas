@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import {
   User, ClipboardList, BookOpen, Save,
   CheckCircle2, AlertCircle, ChevronRight, ChevronLeft,
-  Info, X, AlertTriangle, ShieldAlert, GraduationCap
+  Info, X, AlertTriangle, ShieldAlert, GraduationCap, Camera, Loader2
 } from 'lucide-react';
 import { Student, StudentStatus, Gender, ValidationStatus } from '../types';
 import Autocomplete from '../components/Autocomplete';
@@ -114,6 +114,27 @@ const StudentRegistration: React.FC = () => {
   };
 
   const [formData, setFormData] = useState<Partial<Student>>(initialFormState);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Only image files are allowed.');
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Data = reader.result as string;
+      setFormData(prev => ({ ...prev, profilePictureUrl: base64Data })); // Temp preview
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -350,6 +371,40 @@ const StudentRegistration: React.FC = () => {
                     className="space-y-6"
                   >
                     <TabHeader icon={User} title="Personal Information" description="Core identity and programme details" />
+                    
+                    {/* Profile Picture Upload */}
+                    <div className="flex flex-col items-center gap-4 py-4 mb-4 border-b border-slate-50">
+                      <div className="relative group">
+                        <div className="w-24 h-24 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shadow-sm">
+                          {formData.profilePictureUrl ? (
+                            <img src={formData.profilePictureUrl} alt="Preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={32} className="text-slate-200" />
+                          )}
+                          {isUploading && (
+                            <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                              <Loader2 size={20} className="text-indigo-600 animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="absolute bottom-1 -right-1 p-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-500 transition-all active:scale-90"
+                        >
+                          <Camera size={14} />
+                        </button>
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleFileChange} 
+                          accept="image/*" 
+                          className="hidden" 
+                        />
+                      </div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Scholar Portrait (Optional)</p>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <Input label="CNIC Number" value={formData.cnic} onChange={(v: string) => setFormData({...formData, cnic: v})} required placeholder="e.g. 00000-0000000-0" tooltip="Enter the 13-digit National Identity Card number." />
                       <Input label="Student Name" value={formData.name} onChange={(v: string) => setFormData({...formData, name: v})} required placeholder="Enter Full Name" />

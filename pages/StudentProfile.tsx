@@ -13,7 +13,9 @@ import {
   ShieldAlert,
   CheckCircle2,
   LayoutGrid,
-  FileText
+  FileText,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { Student, StudentStatus, Gender, ValidationStatus } from '../types';
 import Autocomplete from '../components/Autocomplete';
@@ -24,13 +26,14 @@ type ProfileTab = 'identity' | 'supervision' | 'thesis';
 
 const StudentProfile: React.FC = () => {
   const { id } = useParams();
-  const { students, updateStudent, currentRole, degrees, programmes, faculty, settings, departments } = useStore();
+  const { students, updateStudent, currentRole, degrees, programmes, faculty, settings, departments, notify } = useStore();
   const navigate = useNavigate();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const student = students.find(s => s.id === id);
   const [activeTab, setActiveTab] = useState<ProfileTab>('identity');
   const [isDownloading, setIsDownloading] = useState(false);
-  const [editActiveTab, setEditActiveTab] = useState<ProfileTab>('identity');
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [formData, setFormData] = useState<Student | null>(null);
 
@@ -45,7 +48,6 @@ const StudentProfile: React.FC = () => {
 
   const openEditModal = () => {
     setFormData({ ...student });
-    setEditActiveTab('identity');
     setIsEditModalOpen(true);
   };
 
@@ -53,8 +55,34 @@ const StudentProfile: React.FC = () => {
     e.preventDefault();
     if (formData) {
       updateStudent(formData);
+      notify(`${student.name}'s record has been successfully modified.`, 'success');
       setIsEditModalOpen(false);
     }
+  };
+
+  const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !student) return;
+
+    if (!file.type.startsWith('image/')) {
+      notify('Only image files are allowed.', 'error');
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Data = reader.result as string;
+      try {
+        await updateStudent({ ...student, profilePictureUrl: base64Data });
+        notify('Profile picture updated successfully.', 'success');
+      } catch (err) {
+        notify('Failed to update profile picture.', 'error');
+      } finally {
+        setIsUpdatingProfile(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const tabs: { id: ProfileTab; label: string; icon: any }[] = [
@@ -62,6 +90,27 @@ const StudentProfile: React.FC = () => {
     { id: 'supervision', label: 'Supervisory Committee', icon: BookOpen },
     { id: 'thesis', label: 'Dissertation & COE', icon: ClipboardList },
   ];
+
+  const StatusRow = ({ label, value, color }: { label: string, value: string, color: string }) => (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-slate-400 font-medium">{label}</span>
+      <span className="text-xs font-black uppercase text-indigo-600">{value}</span>
+    </div>
+  );
+
+  const InfoBlock = ({ label, value }: { label: string, value: string }) => (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
+      <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1">{value || '---'}</p>
+    </div>
+  );
+
+  const MilestoneMini = ({ label, status }: { label: string, status: string }) => (
+    <div className="flex items-center justify-between text-xs">
+      <span className="text-slate-400">{label}</span>
+      <span className={`${status === 'Completed' || status === 'Yes' ? 'text-emerald-400' : 'text-slate-600'}`}>{status}</span>
+    </div>
+  );
 
   return (
     <motion.div 
@@ -168,13 +217,34 @@ const StudentProfile: React.FC = () => {
         <div className="lg:col-span-4 space-y-8">
           <div className="bg-white dark:bg-slate-900 p-10 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm flex flex-col items-center text-center relative overflow-hidden group">
              <div className="absolute top-0 inset-x-0 h-1.5 bg-indigo-600 transition-all" />
-             <div className="w-32 h-32 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden mb-6 mt-2 shadow-sm transition-transform group-hover:scale-105 duration-500">
-               {student.profilePictureUrl ? (
-                 <img src={student.profilePictureUrl} alt={student.name} className="w-full h-full object-cover" />
-               ) : (
-                 <User className="text-slate-200 dark:text-slate-700" size={48} />
-               )}
-             </div>
+              <div className="relative group/avatar">
+                <div className="w-32 h-32 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-white/5 flex items-center justify-center overflow-hidden mb-6 mt-2 shadow-sm transition-transform group-hover:scale-105 duration-500">
+                  {student.profilePictureUrl ? (
+                    <img src={student.profilePictureUrl} alt={student.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="text-slate-200 dark:text-slate-700" size={48} />
+                  )}
+                  {isUpdatingProfile && (
+                    <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 flex items-center justify-center">
+                      <Loader2 size={24} className="text-indigo-600 animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUpdatingProfile}
+                  className="absolute bottom-4 -right-2 p-2.5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-xl text-indigo-600 shadow-xl hover:bg-indigo-50 dark:hover:bg-slate-700 transition-all active:scale-90 group-hover/avatar:scale-110"
+                >
+                  <Camera size={16} />
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleProfilePictureChange} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+              </div>
              <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">{student.name}</h2>
              <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-3 px-5 py-2 bg-slate-50 dark:bg-slate-800 rounded-full border border-slate-100 dark:border-white/5">
                {student.regNo}

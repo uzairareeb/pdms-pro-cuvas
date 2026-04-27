@@ -17,6 +17,28 @@ async function startServer() {
   const THESIS_BUCKET = 'thesis-files';
   const PROFILE_PICTURE_BUCKET = 'profile-pictures';
 
+  const handleProfilePictureBase64 = async (cnic: string, base64Data: string) => {
+    try {
+      if (!base64Data || !base64Data.startsWith('data:image/')) return base64Data;
+      
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      const supabase = getServiceClient();
+      const buffer = Buffer.from(base64Data.split(';base64,').pop() || '', 'base64');
+      const fileName = `${normalizedCnic}_profile.jpg`;
+
+      await supabase.storage.from(PROFILE_PICTURE_BUCKET).upload(fileName, buffer, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+
+      const { data } = supabase.storage.from(PROFILE_PICTURE_BUCKET).getPublicUrl(fileName);
+      return data.publicUrl;
+    } catch (e) {
+      console.error("Base64 upload failed:", e);
+      return base64Data;
+    }
+  };
+
   const getStoredConfig = () => {
     try {
       if (fs.existsSync(CONFIG_PATH)) {
@@ -268,6 +290,12 @@ async function startServer() {
     const { student } = req.body;
     try {
       const supabase = getSupabaseClient();
+      
+      let profileUrl = student.profilePictureUrl || null;
+      if (profileUrl && profileUrl.startsWith('data:image/')) {
+        profileUrl = await handleProfilePictureBase64(student.cnic, profileUrl);
+      }
+
       const insertPayload: any = {
         id: student.id,
         sr_no: student.srNo,
@@ -301,7 +329,7 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
-        profile_picture_url: student.profilePictureUrl || null,
+        profile_picture_url: profileUrl,
         is_locked: student.isLocked || false,
         // Note: file_path and is_uploaded are in thesis_submissions table, NOT students table
       };
@@ -367,6 +395,12 @@ async function startServer() {
     const { student } = req.body;
     try {
       const supabase = getSupabaseClient();
+
+      let profileUrl = student.profilePictureUrl;
+      if (profileUrl && profileUrl.startsWith('data:image/')) {
+        profileUrl = await handleProfilePictureBase64(student.cnic, profileUrl);
+      }
+
       const { error } = await supabase.from('students').update({
         sr_no: student.srNo,
         cnic: student.cnic,
@@ -399,7 +433,7 @@ async function startServer() {
         validation_status: student.validationStatus,
         validation_date: student.validationDate,
         comments: student.comments,
-        profile_picture_url: student.profilePictureUrl,
+        profile_picture_url: profileUrl,
         is_locked: student.isLocked,
         // Note: file_path and is_uploaded live in thesis_submissions, NOT students
       }).eq('id', student.id);
