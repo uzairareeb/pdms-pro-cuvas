@@ -280,7 +280,11 @@ const StudentPortal: React.FC = () => {
           const res = await fetch('/api/student/upload-profile-picture', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cnic: student.cnic, fileData: base64Data })
+            body: JSON.stringify({ 
+              cnic: student.cnic, 
+              studentId: student.id,
+              fileData: base64Data 
+            })
           });
           const data = await res.json();
           if (data.success) {
@@ -393,7 +397,11 @@ const StudentPortal: React.FC = () => {
               <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Session Active</span>
             </div>
             <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-full">
-              <User size={12} className="text-indigo-600" />
+              {student.profilePictureUrl ? (
+                <img src={student.profilePictureUrl} className="w-5 h-5 rounded-full object-cover border border-indigo-200" alt="Avatar" />
+              ) : (
+                <User size={12} className="text-indigo-600" />
+              )}
               <span className="text-[9px] font-black text-indigo-700 uppercase tracking-widest truncate max-w-[120px]">{student.name}</span>
             </div>
             <button onClick={handleLogout}
@@ -418,27 +426,34 @@ const StudentPortal: React.FC = () => {
               style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
           </div>
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full border border-white/10">
-                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Identity Verified</span>
-              </div>
-              <div>
-                <h2 className="text-3xl lg:text-4xl font-black tracking-tight leading-none uppercase">{student.name}</h2>
-                <p className="text-indigo-200 text-base font-semibold mt-2 opacity-90">{student.programme}</p>
-              </div>
-              <div className="flex flex-wrap gap-6 pt-3 border-t border-white/10">
-                {[
-                  { label: 'Reg. No', value: student.regNo || '—' },
-                  { label: 'Department', value: student.department || '—' },
-                  { label: 'Session', value: student.session || '—' },
-                  { label: 'Semester', value: student.currentSemester ? `Semester ${student.currentSemester}` : '—' },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.25em] mb-1">{label}</p>
-                    <p className="text-sm font-black">{value}</p>
-                  </div>
-                ))}
+            <div className="flex flex-col md:flex-row md:items-center gap-6">
+              {student.profilePictureUrl && (
+                <div className="shrink-0 w-24 h-24 rounded-2xl border-4 border-white/20 overflow-hidden shadow-2xl">
+                  <img src={student.profilePictureUrl} alt="Profile" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full border border-white/10">
+                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Identity Verified</span>
+                </div>
+                <div>
+                  <h2 className="text-3xl lg:text-4xl font-black tracking-tight leading-none uppercase">{student.name}</h2>
+                  <p className="text-indigo-200 text-base font-semibold mt-2 opacity-90">{student.programme}</p>
+                </div>
+                <div className="flex flex-wrap gap-6 pt-3 border-t border-white/10">
+                  {[
+                    { label: 'Reg. No', value: student.regNo || '—' },
+                    { label: 'Department', value: student.department || '—' },
+                    { label: 'Session', value: student.session || '—' },
+                    { label: 'Semester', value: student.currentSemester ? `Semester ${student.currentSemester}` : '—' },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.25em] mb-1">{label}</p>
+                      <p className="text-sm font-black">{value}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="hidden lg:flex shrink-0 gap-4">

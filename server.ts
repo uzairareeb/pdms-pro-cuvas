@@ -716,9 +716,9 @@ async function startServer() {
   });
 
   app.post("/api/student/upload-profile-picture", async (req, res) => {
-    const { cnic, fileData } = req.body;
+    const { cnic, studentId, fileData } = req.body;
     try {
-      if (!cnic || !fileData) throw new Error("CNIC and fileData are required");
+      if ((!cnic && !studentId) || !fileData) throw new Error("Student identification and fileData are required");
       
       await ensureProfilePictureBucket();
       const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
@@ -745,10 +745,16 @@ async function startServer() {
         .getPublicUrl(fileName);
 
       // Update student table with the URL
-      const { error: updateError } = await supabase
-        .from('students')
-        .update({ profile_picture_url: urlData.publicUrl })
-        .eq('cnic', cnic);
+      let updateQuery = supabase.from('students').update({ profile_picture_url: urlData.publicUrl });
+      
+      if (studentId) {
+        updateQuery = updateQuery.eq('id', studentId);
+      } else {
+        // Fallback: Try to match raw CNIC or normalized version if id is missing
+        updateQuery = updateQuery.or(`cnic.eq.${cnic},cnic.eq.${normalizedCnic}`);
+      }
+
+      const { error: updateError } = await updateQuery;
 
       if (updateError) throw new Error(updateError.message);
 
