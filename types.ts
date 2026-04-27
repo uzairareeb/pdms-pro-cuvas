@@ -177,4 +177,16 @@ export interface RolePermissions {
     ip?: string;
   }
   
-  
+  export interface StudentResult {
+    id: string;
+    studentCnic: string;
+    studentName?: string;
+    fatherName?: string;
+    programme?: string;
+    totalMarks: number;
+    obtainedMarks: number;
+    percentage: number;
+    status: 'Pass' | 'Fail';
+    validTill: string;
+    createdAt?: string;
+  }

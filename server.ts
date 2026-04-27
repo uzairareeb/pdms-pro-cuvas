@@ -731,6 +731,38 @@ async function startServer() {
     } catch (e) {}
   };
 
+  const ensureResultsTable = async () => {
+    try {
+      const supabase = getServiceClient();
+      const { error } = await supabase.from('student_results').select('id').limit(1);
+      if (error && (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist'))) {
+        const config = getStoredConfig();
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.serviceKey || config.key;
+        const supabaseUrl = config.url;
+        const sqlQuery = `
+          CREATE TABLE IF NOT EXISTS student_results (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            student_cnic TEXT UNIQUE NOT NULL,
+            total_marks INTEGER NOT NULL,
+            obtained_marks INTEGER NOT NULL,
+            percentage DECIMAL NOT NULL,
+            status TEXT NOT NULL,
+            valid_till DATE NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );`;
+        await fetch(`${supabaseUrl}/rest/v1/rpc/exec`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': serviceKey,
+            'Authorization': `Bearer ${serviceKey}`
+          },
+          body: JSON.stringify({ sql: sqlQuery })
+        });
+      }
+    } catch (e) {}
+  };
+
   // Proxy endpoint to force direct download for admins
   app.get("/api/admin/proxy-download/:cnic", async (req, res) => {
     const { cnic } = req.params;
@@ -813,6 +845,79 @@ async function startServer() {
       });
     } catch (error: any) {
       console.error("Thesis upload error:", error);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // ── Student Results API ──────────────────────────────────────────────────
+  app.get("/api/results/:cnic", async (req, res) => {
+    const { cnic } = req.params;
+    try {
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      const supabase = getServiceClient(); 
+      
+      const { data: result, error: resultError } = await supabase
+        .from('student_results')
+        .select('*')
+        .or(`student_cnic.eq.${cnic},student_cnic.eq.${normalizedCnic}`)
+        .maybeSingle();
+        
+      if (!result) throw new Error("Result not found");
+      
+      // Enrich with student info
+      const { data: student } = await supabase
+        .from('students')
+        .select('name, father_name, programme, degree')
+        .or(`cnic.eq.${cnic},cnic.eq.${normalizedCnic}`)
+        .maybeSingle();
+        
+      return res.json({ 
+        success: true, 
+        data: { 
+          ...result, 
+          studentName: student?.name, 
+          fatherName: student?.father_name, 
+          programme: student?.programme || student?.degree 
+        } 
+      });
+    } catch (error: any) {
+      return res.status(404).json({ success: false, message: "Result not found for this CNIC." });
+    }
+  });
+
+  app.get("/api/admin/results", async (req, res) => {
+    try {
+      const supabase = getServiceClient();
+      const { data, error } = await supabase.from('student_results').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/admin/results", async (req, res) => {
+    const { result } = req.body;
+    try {
+      const supabase = getServiceClient();
+      const normalizedCnic = result.studentCnic.replace(/[-\s]/g, '').trim();
+      
+      const payload = {
+        student_cnic: normalizedCnic,
+        total_marks: result.totalMarks,
+        obtained_marks: result.obtainedMarks,
+        percentage: result.percentage,
+        status: result.status,
+        valid_till: result.validTill
+      };
+      
+      const { error } = await supabase
+        .from('student_results')
+        .upsert(payload, { onConflict: 'student_cnic' });
+        
+      if (error) throw error;
+      return res.json({ success: true, message: 'Result updated successfully.' });
+    } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }
   });
@@ -1126,6 +1231,7 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
   // Run migrations on startup
   void ensureProfilePictureBucket();
   void ensureThesisTable();
+  void ensureResultsTable();
 
   return app;
 }

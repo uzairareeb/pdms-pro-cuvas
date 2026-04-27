@@ -24,6 +24,8 @@ import ReadmissionRegistry from './pages/ReadmissionRegistry';
 import ThesisDuplicates from './pages/ThesisDuplicates';
 import StudentLogin from './pages/StudentLogin';
 import StudentPortal from './pages/StudentPortal';
+import ResultCheck from './pages/ResultCheck';
+import ResultManagement from './pages/ResultManagement';
 
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 import InstallPWA from './components/InstallPWA';
@@ -136,6 +138,8 @@ const AppRoutes = () => {
         <Route path="/settings/database" element={<ProtectedRoute module="Settings"><DatabaseSettings /></ProtectedRoute>} />
         <Route path="/settings/sessions" element={<ProtectedRoute module="Settings"><SessionSettings /></ProtectedRoute>} />
         <Route path="/mobile-app" element={<ProtectedRoute><MobileApp /></ProtectedRoute>} />
+        <Route path="/result-check" element={<ResultCheck />} />
+        <Route path="/result-management" element={<ProtectedRoute module="StudentRecords"><ResultManagement /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

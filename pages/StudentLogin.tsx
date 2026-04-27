@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Maximize, Minimize, AlertCircle, BookOpen, Upload, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { User, Lock, Maximize, Minimize, AlertCircle, BookOpen, Upload, ShieldCheck, CheckCircle2, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const StudentLogin: React.FC = () => {
@@ -156,6 +156,24 @@ const StudentLogin: React.FC = () => {
                 <span>Log In</span>
               </button>
             </form>
+
+            <div className="flex flex-col gap-3 mt-8">
+              <button 
+                type="button"
+                onClick={() => navigate('/login')}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                ← Return to Admin Login
+              </button>
+              <button 
+                type="button"
+                onClick={() => navigate('/result-check')}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-700 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100"
+              >
+                <BarChart3 size={14} />
+                Check Result Status
+              </button>
+            </div>
           </motion.div>
         </div>
 
