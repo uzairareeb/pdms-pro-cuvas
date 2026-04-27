@@ -747,27 +747,40 @@ const StudentPortal: React.FC = () => {
                     </AnimatePresence>
 
                     {/* Content Area */}
-                    <div className="flex-1 flex flex-col">
+                    <div className="flex-1 flex flex-col relative min-h-[400px]">
                       {/* Eligibility Check: Semester 4 or above */}
-                      {Number(student.currentSemester || 0) < 4 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 space-y-6">
-                          <div className="w-20 h-20 bg-rose-50 rounded-3xl flex items-center justify-center">
-                            <ShieldAlert size={40} className="text-rose-500" />
-                          </div>
-                          <div className="space-y-4">
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Submission Restricted</h3>
-                            <p className="text-slate-600 text-sm font-bold max-w-sm mx-auto leading-relaxed">
-                              "You are not allow to submit your thesis yet, please wait."
-                            </p>
-                            <div className="pt-4 border-t border-slate-100">
-                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
-                                Current Semester: <span className="text-indigo-600">0{student.currentSemester || 1}</span>
-                              </p>
-                              <p className="text-[9px] text-slate-400 mt-1">Eligibility begins from Semester 4</p>
+                      {(() => {
+                        const semStr = String(student.currentSemester || '');
+                        const match = semStr.match(/\d+/);
+                        const semNum = match ? parseInt(match[0], 10) : (typeof student.currentSemester === 'number' ? student.currentSemester : 0);
+                        
+                        if (semNum < 4) {
+                          return (
+                            <div className="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center p-12 text-center">
+                              <div className="max-w-md space-y-8">
+                                <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto">
+                                  <ShieldAlert size={40} className="text-slate-300" />
+                                </div>
+                                <div className="space-y-4">
+                                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Access Restricted</h3>
+                                  <p className="text-slate-500 text-sm font-bold leading-relaxed">
+                                    “You are not allowed to submit your thesis yet. Please contact the Directorate of Advanced Studies for further information.”
+                                  </p>
+                                </div>
+                                <div className="pt-6 border-t border-slate-100">
+                                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
+                                    Current Status: <span className="text-indigo-600">Semester {semNum || student.currentSemester}</span>
+                                  </p>
+                                  <p className="text-[9px] text-slate-300 mt-1 uppercase tracking-widest font-bold">Eligibility Begins: Semester 4</p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ) : (
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {/* Main Submission Interface */}
                       <AnimatePresence mode="wait">
 
                         {/* STEP 1: SELECT */}
@@ -1010,8 +1023,7 @@ const StudentPortal: React.FC = () => {
                         )}
 
                       </AnimatePresence>
-                    )}
-                  </div>
+                    </div>
                 </div>
               </div>
             </div>
