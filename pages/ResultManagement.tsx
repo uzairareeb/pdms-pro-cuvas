@@ -7,7 +7,7 @@ import {
   AlertCircle, Calendar, Save, X, User,
   FileSpreadsheet, ArrowUpRight, GraduationCap, Upload, 
   Settings as SettingsIcon, Image as ImageIcon, CheckCircle, Info, ShieldCheck,
-  Zap, TrendingUp, Users
+  Zap, TrendingUp, Users, History, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudentResult, Student } from '../types';
@@ -271,17 +271,17 @@ const ResultManagement: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-8"
+            className="space-y-10"
           >
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { label: 'Registered Results', value: results.length, icon: Users, color: 'indigo' },
+                { label: 'Total Uploaded Results', value: results.length, icon: Users, color: 'indigo' },
                 { label: 'Pass Percentage', value: `${results.length ? Math.round((results.filter(r => r.status === 'Pass').length / results.length) * 100) : 0}%`, icon: TrendingUp, color: 'emerald' },
-                { label: 'Average Score', value: `${results.length ? Math.round(results.reduce((acc, r) => acc + r.percentage, 0) / results.length) : 0}%`, icon: Zap, color: 'amber' },
-                { label: 'Active Templates', value: templates.length, icon: FileSpreadsheet, color: 'indigo' },
+                { label: 'Avg Achievement', value: `${results.length ? Math.round(results.reduce((acc, r) => acc + r.percentage, 0) / results.length) : 0}%`, icon: Zap, color: 'amber' },
+                { label: 'Design Templates', value: templates.length, icon: FileSpreadsheet, color: 'indigo' },
               ].map((stat, i) => (
-                <div key={i} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-6 group hover:border-indigo-200 transition-all">
+                <div key={i} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-6 group hover:border-indigo-200 transition-all">
                   <div className={`w-14 h-14 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center group-hover:scale-110 transition-transform`}>
                     <stat.icon size={28} />
                   </div>
@@ -293,21 +293,88 @@ const ResultManagement: React.FC = () => {
               ))}
             </div>
 
-            {/* Visual Insights Placeholder */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center space-y-4 py-20">
-                  <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-                     <TrendingUp size={32} />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+               {/* Quick Actions */}
+               <div className="lg:col-span-4 space-y-6">
+                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                        <Zap size={16} className="text-amber-500" />
+                        Quick Actions
+                     </h3>
+                     <div className="space-y-3">
+                        <button 
+                          onClick={() => navigate('/result-admin/upload')}
+                          className="w-full flex items-center justify-between p-5 bg-indigo-50 text-indigo-700 rounded-2xl group hover:bg-indigo-600 hover:text-white transition-all"
+                        >
+                           <div className="flex items-center gap-3">
+                              <Upload size={18} />
+                              <span className="text-[11px] font-black uppercase tracking-widest">Upload Results</span>
+                           </div>
+                           <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                        </button>
+                        <button 
+                          onClick={() => navigate('/result-admin/templates')}
+                          className="w-full flex items-center justify-between p-5 bg-slate-50 text-slate-700 rounded-2xl group hover:bg-slate-900 hover:text-white transition-all"
+                        >
+                           <div className="flex items-center gap-3">
+                              <FileSpreadsheet size={18} />
+                              <span className="text-[11px] font-black uppercase tracking-widest">Manage Templates</span>
+                           </div>
+                           <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                        </button>
+                     </div>
                   </div>
-                  <h3 className="text-lg font-black text-slate-900 uppercase">Growth Trends</h3>
-                  <p className="text-xs font-medium text-slate-400 max-w-xs">Visualization of student performance trends over the current academic session.</p>
+
+                  <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
+                     <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+                        <ShieldCheck size={120} />
+                     </div>
+                     <div className="relative z-10 space-y-4">
+                        <p className="text-[9px] font-black text-indigo-200 uppercase tracking-widest">System Status</p>
+                        <h4 className="text-xl font-black uppercase">Portal Secured</h4>
+                        <p className="text-[10px] text-indigo-100/60 leading-relaxed">Your session is protected by end-to-end encryption and administrative access controls.</p>
+                     </div>
+                  </div>
                </div>
-               <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center space-y-4 py-20">
-                  <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
-                     <CheckCircle2 size={32} />
+
+               {/* Recent Uploads */}
+               <div className="lg:col-span-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <History size={16} className="text-indigo-600" />
+                        Recent Uploads
+                     </h3>
+                     <button onClick={() => navigate('/result-admin/upload')} className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800">View All</button>
                   </div>
-                  <h3 className="text-lg font-black text-slate-900 uppercase">Success Metrics</h3>
-                  <p className="text-xs font-medium text-slate-400 max-w-xs">Detailed breakdown of pass/fail ratios across different departments.</p>
+                  <div className="overflow-x-auto">
+                     <table className="w-full text-left">
+                        <thead>
+                           <tr className="bg-slate-50/50">
+                              <th className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Scholar CNIC</th>
+                              <th className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Score</th>
+                              <th className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                           </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                           {results.slice(0, 5).map((res) => (
+                             <tr key={res.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-8 py-4 text-xs font-black text-slate-900">{res.studentCnic}</td>
+                                <td className="px-8 py-4 text-xs font-bold text-slate-500">{res.percentage}%</td>
+                                <td className="px-8 py-4 text-right">
+                                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                                     res.status === 'Pass' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                                   }`}>
+                                      {res.status}
+                                   </span>
+                                </td>
+                             </tr>
+                           ))}
+                           {results.length === 0 && (
+                             <tr><td colSpan={3} className="px-8 py-12 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">No recent activity detected</td></tr>
+                           )}
+                        </tbody>
+                     </table>
+                  </div>
                </div>
             </div>
           </motion.div>
