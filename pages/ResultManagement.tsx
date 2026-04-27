@@ -234,7 +234,7 @@ const ResultManagement: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
-            {activeTab === 'dashboard' ? 'Result Analytics' : activeTab === 'upload' ? 'Upload Center' : 'Design Studio'}
+            {activeTab === 'dashboard' ? 'Portal Dashboard' : activeTab === 'upload' ? 'Bulk Upload Center' : 'Design Studio'}
           </h1>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-3">
             {activeTab === 'dashboard' ? 'Performance Overview & Stats' : activeTab === 'upload' ? 'Bulk Data Processing' : 'Certificate Template Management'}

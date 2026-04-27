@@ -27,8 +27,8 @@ const ResultLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   const menuItems = [
     { name: 'Portal Dashboard', icon: LayoutDashboard, path: '/result-admin/dashboard' },
-    { name: 'Bulk Upload Results', icon: Upload, path: '/result-admin/upload' },
-    { name: 'Result Card Templates', icon: FileSpreadsheet, path: '/result-admin/templates' },
+    { name: 'Bulk Upload Center', icon: Upload, path: '/result-admin/upload' },
+    { name: 'Design Studio', icon: FileSpreadsheet, path: '/result-admin/templates' },
   ];
 
   return (
