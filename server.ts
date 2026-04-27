@@ -734,6 +734,17 @@ async function startServer() {
   const ensureResultsTable = async () => {
     try {
       const supabase = getServiceClient();
+      
+      // Ensure passing_marks column exists
+      await supabase.rpc('exec', { sql: `
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='student_results' AND column_name='passing_marks') THEN
+            ALTER TABLE student_results ADD COLUMN passing_marks INTEGER DEFAULT 550;
+          END IF;
+        END $$;
+      `}).catch(() => {});
+
       const { error } = await supabase.from('student_results').select('id').limit(1);
       if (error && (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist'))) {
         const config = getStoredConfig();
@@ -745,9 +756,39 @@ async function startServer() {
             student_cnic TEXT UNIQUE NOT NULL,
             total_marks INTEGER NOT NULL,
             obtained_marks INTEGER NOT NULL,
+            passing_marks INTEGER NOT NULL DEFAULT 550,
             percentage DECIMAL NOT NULL,
             status TEXT NOT NULL,
             valid_till DATE NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );`;
+        await fetch(`${supabaseUrl}/rest/v1/rpc/exec`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': serviceKey,
+            'Authorization': `Bearer ${serviceKey}`
+          },
+          body: JSON.stringify({ sql: sqlQuery })
+        });
+      }
+    } catch (e) {}
+  };
+
+  const ensureTemplatesTable = async () => {
+    try {
+      const supabase = getServiceClient();
+      const { error } = await supabase.from('result_templates').select('id').limit(1);
+      if (error && (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist'))) {
+        const config = getStoredConfig();
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.serviceKey || config.key;
+        const supabaseUrl = config.url;
+        const sqlQuery = `
+          CREATE TABLE IF NOT EXISTS result_templates (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            name TEXT NOT NULL,
+            file_url TEXT NOT NULL,
+            is_default BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMPTZ DEFAULT NOW()
           );`;
         await fetch(`${supabaseUrl}/rest/v1/rpc/exec`, {
@@ -906,6 +947,7 @@ async function startServer() {
         student_cnic: normalizedCnic,
         total_marks: result.totalMarks,
         obtained_marks: result.obtainedMarks,
+        passing_marks: result.passingMarks || 550,
         percentage: result.percentage,
         status: result.status,
         valid_till: result.validTill
@@ -917,6 +959,51 @@ async function startServer() {
         
       if (error) throw error;
       return res.json({ success: true, message: 'Result updated successfully.' });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/admin/results/bulk-add", async (req, res) => {
+    const { results } = req.body;
+    try {
+      const supabase = getServiceClient();
+      const rows = results.map((r: any) => ({
+        student_cnic: r.studentCnic.replace(/[-\s]/g, '').trim(),
+        total_marks: r.totalMarks,
+        obtained_marks: r.obtainedMarks,
+        passing_marks: r.passingMarks || 550,
+        percentage: r.percentage,
+        status: r.status,
+        valid_till: r.validTill
+      }));
+
+      const { error } = await supabase.from('student_results').upsert(rows, { onConflict: 'student_cnic' });
+      if (error) throw error;
+      return res.json({ success: true, count: rows.length });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.get("/api/admin/templates", async (req, res) => {
+    try {
+      const supabase = getServiceClient();
+      const { data, error } = await supabase.from('result_templates').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json({ success: true, data });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.post("/api/admin/templates", async (req, res) => {
+    const { template } = req.body;
+    try {
+      const supabase = getServiceClient();
+      const { error } = await supabase.from('result_templates').insert([template]);
+      if (error) throw error;
+      return res.json({ success: true, message: 'Template saved successfully.' });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -1232,6 +1319,7 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
   void ensureProfilePictureBucket();
   void ensureThesisTable();
   void ensureResultsTable();
+  void ensureTemplatesTable();
 
   return app;
 }

@@ -10,7 +10,22 @@ const ResultCheck: React.FC = () => {
   const [cnic, setCnic] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<StudentResult | null>(null);
+  const [template, setTemplate] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchDefaultTemplate = async () => {
+      try {
+        const res = await fetch('/api/admin/templates');
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+          const def = data.data.find((t: any) => t.is_default) || data.data[0];
+          setTemplate(def);
+        }
+      } catch (err) {}
+    };
+    fetchDefaultTemplate();
+  }, []);
 
   const handleCnicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value.replace(/\D/g, '');
@@ -225,7 +240,13 @@ const ResultCheck: React.FC = () => {
               </div>
 
               {/* Result Card (Printable) */}
-              <div id="result-card" className="bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-2xl overflow-hidden print:border-0 print:shadow-none print:rounded-none">
+              <div id="result-card" className="relative bg-white border-2 border-slate-100 rounded-[2.5rem] shadow-2xl overflow-hidden print:border-0 print:shadow-none print:rounded-none">
+                {template && (
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none overflow-hidden">
+                    <img src={template.file_url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                
                 {/* Result Card Header */}
                 <div className="bg-slate-900 p-8 sm:p-12 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
@@ -267,38 +288,48 @@ const ResultCheck: React.FC = () => {
                   </div>
 
                   {/* Marks Dashboard */}
-                  <div className="bg-slate-50 rounded-[2rem] border border-slate-100 p-8 sm:p-10 grid grid-cols-1 sm:grid-cols-3 gap-10">
+                  <div className="bg-slate-50 rounded-[2rem] border border-slate-100 p-8 sm:p-10 grid grid-cols-2 sm:grid-cols-4 gap-10">
                     <div className="flex flex-col items-center text-center space-y-4">
-                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
-                        <BarChart3 size={24} className="text-indigo-600" />
+                      <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
+                        <BarChart3 size={20} className="text-indigo-600" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Marks</p>
-                        <p className="text-3xl font-black text-slate-900">{result.totalMarks}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col items-center text-center space-y-4 sm:border-x border-slate-200">
-                      <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-                        <CheckCircle2 size={24} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Obtained Marks</p>
-                        <p className="text-3xl font-black text-slate-900">{result.obtainedMarks}</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total</p>
+                        <p className="text-2xl font-black text-slate-900">{result.totalMarks}</p>
                       </div>
                     </div>
 
                     <div className="flex flex-col items-center text-center space-y-4">
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm border ${
+                      <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
+                        <CheckCircle2 size={20} className="text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Passing</p>
+                        <p className="text-2xl font-black text-slate-900">{result.passingMarks}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-center text-center space-y-4">
+                      <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                        <CheckCircle2 size={20} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Obtained</p>
+                        <p className="text-2xl font-black text-slate-900">{result.obtainedMarks}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center text-center space-y-4">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border ${
                         result.status === 'Pass' ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'
                       }`}>
-                        <span className={`text-xl font-black ${
+                        <span className={`text-lg font-black ${
                           result.status === 'Pass' ? 'text-emerald-600' : 'text-rose-600'
                         }`}>{result.percentage}%</span>
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Percentage</p>
-                        <p className="text-3xl font-black text-slate-900">{result.percentage}%</p>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                        <p className="text-2xl font-black text-slate-900">{result.status}</p>
                       </div>
                     </div>
                   </div>

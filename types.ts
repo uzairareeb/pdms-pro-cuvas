@@ -185,6 +185,7 @@ export interface RolePermissions {
     programme?: string;
     totalMarks: number;
     obtainedMarks: number;
+    passingMarks: number;
     percentage: number;
     status: 'Pass' | 'Fail';
     validTill: string;
