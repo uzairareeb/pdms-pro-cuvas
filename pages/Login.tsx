@@ -132,10 +132,10 @@ const Login: React.FC = () => {
             <div className="text-center mt-6">
               <button 
                 type="button"
-                onClick={() => navigate('/department-login')}
+                onClick={() => navigate('/student-login')}
                 className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
               >
-                Go to Department Portal Login →
+                Go to Student Portal Login →
               </button>
             </div>
           </motion.div>

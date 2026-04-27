@@ -22,6 +22,8 @@ import SynopsisSubmission from './pages/SynopsisSubmission';
 import ThesisTracking from './pages/ThesisTracking';
 import ReadmissionRegistry from './pages/ReadmissionRegistry';
 import ThesisDuplicates from './pages/ThesisDuplicates';
+import StudentLogin from './pages/StudentLogin';
+import StudentPortal from './pages/StudentPortal';
 
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 import InstallPWA from './components/InstallPWA';
@@ -114,6 +116,8 @@ const AppRoutes = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route path="/login" element={<Login />} />
+        <Route path="/student-login" element={<StudentLogin />} />
+        <Route path="/student-portal" element={<StudentPortal />} />
         <Route path="/" element={<ProtectedRoute module="Dashboard"><Dashboard /></ProtectedRoute>} />
         <Route path="/registration" element={<ProtectedRoute module="StudentRegistration" action="create"><StudentRegistration /></ProtectedRoute>} />
         <Route path="/records" element={<ProtectedRoute module="StudentRecords"><StudentRecords /></ProtectedRoute>} />
