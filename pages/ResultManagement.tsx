@@ -6,7 +6,7 @@ import {
   MoreVertical, Edit, Trash2, CheckCircle2, 
   AlertCircle, Calendar, Save, X, User,
   FileSpreadsheet, ArrowUpRight, GraduationCap, Upload, 
-  Settings as SettingsIcon, Image as ImageIcon, CheckCircle, Info
+  Settings as SettingsIcon, Image as ImageIcon, CheckCircle, Info, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudentResult, Student } from '../types';
