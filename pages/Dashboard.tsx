@@ -6,7 +6,8 @@ import {
   Target, BarChart3, CheckCircle, LogOut, PauseCircle,
   AlertCircle, Layers, Zap, Users, ChevronRight,
   ShieldAlert, GraduationCap, BookOpen, FileCheck,
-  UserX, TrendingUp, Building2, ClipboardList, Clock, User
+  UserX, TrendingUp, Building2, ClipboardList, Clock, User,
+  CheckCircle2, Printer
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -271,6 +272,62 @@ const Dashboard: React.FC = () => {
         
         {/* Subtle decorative elements */}
         <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent opacity-30" />
+      </motion.div>
+
+      {/* Result Portal Access Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -5, scale: 1.005 }}
+        className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-emerald-950 rounded-3xl p-8 shadow-xl border border-white/5 group no-print"
+      >
+        <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
+          <BarChart3 size={200} className="text-white" />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="space-y-5">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Performance Registry</span>
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-white tracking-tight leading-none uppercase">Result Portal</h2>
+              <p className="text-indigo-200/60 text-sm font-medium mt-3 max-w-xl">
+                Access the official student performance records and result checking system. 
+                Manage marks, generate result cards, and provide public verification services.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 pt-1">
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
+                <CheckCircle2 size={14} className="text-emerald-400" />
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Official Card Generation</span>
+              </div>
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
+                <Printer size={14} className="text-indigo-400" />
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">PDF Export Enabled</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">
+            <button 
+              onClick={() => window.open('/#/result-check', '_blank', 'noopener,noreferrer')}
+              className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Search size={14} />
+              Check Results
+            </button>
+            <button 
+              onClick={() => navigate('/result-management')}
+              className="w-full sm:w-auto px-10 py-5 bg-emerald-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-emerald-600/40 hover:bg-emerald-500 hover:scale-105 transition-all active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
+            >
+              <BarChart3 size={16} />
+              Manage Results
+            </button>
+          </div>
+        </div>
+        
+        {/* Subtle decorative elements */}
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-30" />
       </motion.div>
 
 
