@@ -743,7 +743,7 @@ async function startServer() {
             ALTER TABLE student_results ADD COLUMN passing_marks INTEGER DEFAULT 550;
           END IF;
         END $$;
-      `}).catch(() => {});
+      `});
 
       const { error } = await supabase.from('student_results').select('id').limit(1);
       if (error && (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist'))) {
