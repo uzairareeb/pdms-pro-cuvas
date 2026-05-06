@@ -176,7 +176,7 @@ const StudentProfile: React.FC = () => {
           const coreFields = [
             student.name, student.cnic, student.contactNumber, student.regNo, 
             student.programme, student.department, student.session, 
-            student.supervisorName, student.thesisId,
+            student.supervisorName, student.thesisTitle, student.thesisId,
             student.synopsis !== 'Not Submitted' ? student.synopsis : null,
             student.finalThesisStatus !== 'Not Submitted' ? student.finalThesisStatus : null
           ];
@@ -342,6 +342,9 @@ const StudentProfile: React.FC = () => {
                     <InfoBlock label="Co-Supervisor" value={student.coSupervisor || 'Not Assigned'} />
                     <InfoBlock label="Committee Member 01" value={student.member1 || '---'} />
                     <InfoBlock label="Committee Member 02" value={student.member2 || '---'} />
+                    <div className="sm:col-span-2">
+                      <InfoBlock label="Thesis Title" value={student.thesisTitle} />
+                    </div>
                     <InfoBlock label="Research ID / Thesis ID" value={student.thesisId} />
                     {settings.milestones.synopsis.enabled && (
                       <>
@@ -487,6 +490,9 @@ const StudentProfile: React.FC = () => {
                         <div className="hidden lg:block" />
                         <Autocomplete label="Member 1" value={formData.member1 || ''} suggestions={faculty} onChange={v => setFormData({...formData, member1: v})} />
                         <Autocomplete label="Member 2" value={formData.member2 || ''} suggestions={faculty} onChange={v => setFormData({...formData, member2: v})} />
+                        <div className="md:col-span-2">
+                          <Input label="Thesis Title" value={formData.thesisTitle} onChange={v => setFormData({...formData, thesisTitle: v})} />
+                        </div>
                         <Input label="Thesis ID" value={formData.thesisId} onChange={v => setFormData({...formData, thesisId: v})} />
                         
                         {settings.milestones.synopsis.enabled && (

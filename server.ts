@@ -257,6 +257,7 @@ async function startServer() {
           coSupervisor: s.co_supervisor,
           member1: s.member1,
           member2: s.member2,
+          thesisTitle: s.thesis_title,
           thesisId: s.thesis_id,
           synopsis: s.synopsis,
           synopsisSubmissionDate: s.synopsis_submission_date,
@@ -315,6 +316,7 @@ async function startServer() {
         co_supervisor: student.coSupervisor,
         member1: student.member1,
         member2: student.member2,
+        thesis_title: student.thesisTitle,
         thesis_id: student.thesisId,
         synopsis: student.synopsis,
         synopsis_submission_date: student.synopsisSubmissionDate,
@@ -365,6 +367,7 @@ async function startServer() {
         co_supervisor: student.coSupervisor,
         member1: student.member1,
         member2: student.member2,
+        thesis_title: student.thesisTitle,
         thesis_id: student.thesisId,
         synopsis: student.synopsis,
         synopsis_submission_date: student.synopsisSubmissionDate,
@@ -419,6 +422,7 @@ async function startServer() {
         co_supervisor: student.coSupervisor,
         member1: student.member1,
         member2: student.member2,
+        thesis_title: student.thesisTitle,
         thesis_id: student.thesisId,
         synopsis: student.synopsis,
         synopsis_submission_date: student.synopsisSubmissionDate,
@@ -648,6 +652,9 @@ async function startServer() {
         BEGIN 
           IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='students' AND column_name='profile_picture_url') THEN
             ALTER TABLE students ADD COLUMN profile_picture_url TEXT;
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='students' AND column_name='thesis_title') THEN
+            ALTER TABLE students ADD COLUMN thesis_title TEXT;
           END IF;
         END $$;
 
@@ -1182,6 +1189,23 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
       return res.json({ success: true, message: "Thesis finalized and recorded successfully!" });
     } catch (error: any) {
       console.error("Finalize error:", error);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  // ── Save thesis title separately (called right after upload) ─────────────
+  app.post("/api/student/update-thesis-title", async (req, res) => {
+    const { cnic, thesisTitle } = req.body;
+    try {
+      if (!cnic || !thesisTitle) throw new Error("CNIC and thesisTitle are required");
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      const supabase = getServiceClient();
+      const { error } = await supabase.from('students')
+        .update({ thesis_title: thesisTitle })
+        .or(`cnic.eq.${cnic},cnic.eq.${normalizedCnic}`);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }
   });

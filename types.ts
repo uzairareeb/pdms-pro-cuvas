@@ -40,6 +40,8 @@ export interface Student {
   member1?: string;
   member2?: string;
   
+  
+  thesisTitle?: string;
   thesisId: string;
   synopsis: 'Not Submitted' | 'Submitted' | 'Approved';
   synopsisSubmissionDate: string;

@@ -132,6 +132,9 @@ const StudentPortal: React.FC = () => {
   const [thesisTitle, setThesisTitle] = useState<string | null>(null);
   const [extractingTitle, setExtractingTitle] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [thesisTitleEditMode, setThesisTitleEditMode] = useState(false);
+  const [thesisTitleInput, setThesisTitleInput] = useState('');
+  const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   const checkUploadStatus = useCallback(async (st: any) => {
@@ -300,6 +303,33 @@ const StudentPortal: React.FC = () => {
     } catch (err) {
       setError('Failed to process image.');
       setIsUploadingProfile(false);
+    }
+  };
+
+  const handleUpdateThesisTitle = async () => {
+    if (!student) return;
+    setIsUpdatingTitle(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/student/update-thesis-title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cnic: student.cnic, thesisTitle: thesisTitleInput })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updated = { ...student, thesisTitle: thesisTitleInput };
+        setStudent(updated);
+        localStorage.setItem('cas_student_user', JSON.stringify(updated));
+        setThesisTitle(thesisTitleInput);
+        setThesisTitleEditMode(false);
+      } else {
+        throw new Error(data.message || 'Failed to update thesis title.');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsUpdatingTitle(false);
     }
   };
 
@@ -500,6 +530,14 @@ const StudentPortal: React.FC = () => {
                 <StatCard icon={Layers} label="Semester" value={`Sem ${student.currentSemester || 1}`} color="linear-gradient(135deg,#0369a1 0%,#0284c7 100%)" />
                 <StatCard icon={Target} label="Status" value={student.status || 'Active'} color="linear-gradient(135deg,#059669 0%,#16a34a 100%)" />
                 <StatCard icon={Award} label="Thesis Stage" value={student.gs4Form || 'Pending'} color="linear-gradient(135deg,#dc2626 0%,#e11d48 100%)" />
+              </div>
+
+              {/* Highlighted Thesis Title */}
+              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 text-center shadow-sm">
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-2">Registered Thesis Title</p>
+                <h3 className="text-xl md:text-2xl font-black text-indigo-900 leading-tight">
+                  {student.thesisTitle ? `“${student.thesisTitle}”` : "“No Thesis Title Provided”"}
+                </h3>
               </div>
 
               {/* Two columns */}
@@ -719,6 +757,33 @@ const StudentPortal: React.FC = () => {
                       <InfoBlock label="Committee Member 2" value={student.member2 || '—'} />
                       <InfoBlock label="Thesis / Research ID" value={student.thesisId} />
                       <InfoBlock label="GS-2 Coursework" value={student.gs2CourseWork || '—'} />
+                      
+                      <div className="sm:col-span-2 bg-slate-50 rounded-xl p-5 border border-slate-100">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Thesis Title</p>
+                          {!thesisTitleEditMode && (
+                            <button onClick={() => { setThesisTitleInput(student.thesisTitle || ''); setThesisTitleEditMode(true); }} className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">Edit Title</button>
+                          )}
+                        </div>
+                        {thesisTitleEditMode ? (
+                          <div className="space-y-3">
+                            <textarea
+                              value={thesisTitleInput}
+                              onChange={(e) => setThesisTitleInput(e.target.value)}
+                              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all min-h-[80px]"
+                              placeholder="Enter your thesis title..."
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={handleUpdateThesisTitle} disabled={isUpdatingTitle} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2">
+                                {isUpdatingTitle && <Loader2 size={12} className="animate-spin" />} Save
+                              </button>
+                              <button onClick={() => setThesisTitleEditMode(false)} disabled={isUpdatingTitle} className="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 transition-all active:scale-95 disabled:opacity-50">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm font-bold text-slate-900 tracking-tight leading-relaxed">{student.thesisTitle || '—'}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 

@@ -106,7 +106,7 @@ const StudentRegistration: React.FC = () => {
     degree: 'M.Phil', session: settings.institution.admissionSession, programme: '',
     currentSemester: 1, status: StudentStatus.ACTIVE, supervisorName: '', coSupervisor: '',
     member1: '', member2: '',
-    thesisId: '', synopsis: 'Not Submitted', synopsisSubmissionDate: '',
+    thesisTitle: '', thesisId: '', synopsis: 'Not Submitted', synopsisSubmissionDate: '',
     gs2CourseWork: 'Not Completed', gs4Form: 'Not Submitted',
     semiFinalThesisStatus: 'Not Submitted', semiFinalThesisSubmissionDate: '',
     finalThesisStatus: 'Not Submitted', finalThesisSubmissionDate: '', thesisSentToCOE: 'No',
@@ -442,6 +442,9 @@ const StudentRegistration: React.FC = () => {
                       <Input label="Co-Supervisor" value={formData.coSupervisor || ''} onChange={(v: string) => setFormData({...formData, coSupervisor: v})} placeholder="Enter Co-Supervisor Name" />
                       <Autocomplete label="Committee Member 1" value={formData.member1 || ''} suggestions={faculty} onChange={(v: string) => setFormData({...formData, member1: v})} placeholder="Search faculty name..." />
                       <Autocomplete label="Committee Member 2" value={formData.member2 || ''} suggestions={faculty} onChange={(v: string) => setFormData({...formData, member2: v})} placeholder="Search faculty name..." />
+                      <div className="sm:col-span-2">
+                        <Input label="Thesis Title" value={formData.thesisTitle} onChange={(v: string) => setFormData({...formData, thesisTitle: v})} placeholder="Enter official thesis title..." />
+                      </div>
                       <Input label="Thesis ID / Research ID" value={formData.thesisId} onChange={(v: string) => setFormData({...formData, thesisId: v})} placeholder="Unique Research Identifier" />
                       <div className="hidden sm:block" />
                       <Select label="Synopsis Status" value={formData.synopsis}
