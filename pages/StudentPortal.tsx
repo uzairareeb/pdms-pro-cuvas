@@ -137,33 +137,45 @@ const StudentPortal: React.FC = () => {
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
-  const checkUploadStatus = useCallback(async (st: any) => {
-    setLoading(true);
+  const checkUploadStatus = useCallback(async (cnicRaw: string) => {
     try {
-      if (typeof st.isUploaded === 'undefined') { /* initial load check */ }
-      const cnicBytes = st.cnic.replace(/[-\s]/g, '').trim();
+      const cnicBytes = cnicRaw.replace(/[-\s]/g, '').trim();
       const res = await fetch(`/api/student/check-upload/${cnicBytes}`);
       const data = await res.json();
-      if (data.thesisTitle) setThesisTitle(data.thesisTitle);
-      
       if (data.finalized) {
         setStep('completed');
         setPublicUrl(data.publicUrl || null);
       } else if (data.exists) {
-        // Note: Default structure uses 'thesis-files/cnic.pdf'
         setUploadedFilePath(`thesis-files/${cnicBytes}.pdf`);
         setPublicUrl(data.publicUrl);
         setStep('staged');
       }
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('cas_student_user');
     if (!saved) { navigate('/student-login'); return; }
-    const parsed = JSON.parse(saved);
-    setStudent(parsed);
-    checkUploadStatus(parsed);
+    const cached = JSON.parse(saved);
+    // Always show cached data immediately while fresh data loads
+    setStudent(cached);
+    if (cached.thesisTitle) setThesisTitle(cached.thesisTitle);
+    setLoading(true);
+    // Fetch fresh student record from DB (picks up thesis_title & other admin updates)
+    const cnicNorm = (cached.cnic || '').replace(/[-\s]/g, '').trim();
+    fetch(`/api/student/me/${cnicNorm}`)
+      .then(r => r.json())
+      .then(result => {
+        if (result.success && result.data) {
+          const fresh = result.data;
+          setStudent(fresh);
+          localStorage.setItem('cas_student_user', JSON.stringify(fresh));
+          if (fresh.thesisTitle) setThesisTitle(fresh.thesisTitle);
+        }
+      })
+      .catch(() => { /* non-critical — cached data still shown */ })
+      .finally(() => setLoading(false));
+    checkUploadStatus(cached.cnic);
   }, [navigate, checkUploadStatus]);
 
   const handleLogout = () => {
@@ -536,7 +548,10 @@ const StudentPortal: React.FC = () => {
               <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 text-center shadow-sm">
                 <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-2">Registered Thesis Title</p>
                 <h3 className="text-xl md:text-2xl font-black text-indigo-900 leading-tight">
-                  {student.thesisTitle ? `“${student.thesisTitle}”` : "“No Thesis Title Provided”"}
+                  {thesisTitle || student.thesisTitle
+                    ? `“${thesisTitle || student.thesisTitle}”`
+                    : <span className="text-indigo-400 text-base font-bold italic">No Thesis Title Provided — go to Profile tab to add one</span>
+                  }
                 </h3>
               </div>
 
@@ -762,7 +777,7 @@ const StudentPortal: React.FC = () => {
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Thesis Title</p>
                           {!thesisTitleEditMode && (
-                            <button onClick={() => { setThesisTitleInput(student.thesisTitle || ''); setThesisTitleEditMode(true); }} className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">Edit Title</button>
+                            <button onClick={() => { setThesisTitleInput(thesisTitle || student.thesisTitle || ''); setThesisTitleEditMode(true); }} className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">Edit Title</button>
                           )}
                         </div>
                         {thesisTitleEditMode ? (
@@ -781,7 +796,7 @@ const StudentPortal: React.FC = () => {
                             </div>
                           </div>
                         ) : (
-                          <p className="text-sm font-bold text-slate-900 tracking-tight leading-relaxed">{student.thesisTitle || '—'}</p>
+                          <p className="text-sm font-bold text-slate-900 tracking-tight leading-relaxed">{thesisTitle || student.thesisTitle || '—'}</p>
                         )}
                       </div>
                     </div>

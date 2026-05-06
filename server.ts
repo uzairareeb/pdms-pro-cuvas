@@ -1210,6 +1210,87 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
     }
   });
 
+  // ── Fetch fresh student record by CNIC (used by Student Portal on load) ──
+  app.get("/api/student/me/:cnic", async (req, res) => {
+    const { cnic } = req.params;
+    try {
+      const normalizedCnic = cnic.replace(/[-\s]/g, '').trim();
+      const supabase = getServiceClient();
+
+      // Fetch from students table
+      const { data: student, error } = await supabase
+        .from('students')
+        .select('*')
+        .or(`cnic.eq.${cnic},cnic.eq.${normalizedCnic}`)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+
+      // Also fetch submission record
+      const { data: sub } = await supabase
+        .from('thesis_submissions')
+        .select('file_path, is_uploaded, uploaded_at, thesis_title')
+        .eq('student_cnic', normalizedCnic)
+        .maybeSingle();
+
+      let publicUrl = null;
+      if (sub?.file_path) {
+        const { data: urlData } = supabase.storage
+          .from(THESIS_BUCKET)
+          .getPublicUrl(sub.file_path.split('/').pop() || '');
+        publicUrl = urlData.publicUrl;
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          id: student.id,
+          srNo: student.sr_no,
+          cnic: student.cnic,
+          name: student.name,
+          fatherName: student.father_name,
+          regNo: student.reg_no,
+          gender: student.gender,
+          contactNumber: student.contact_number,
+          degree: student.degree,
+          session: student.session,
+          department: student.department,
+          programme: student.programme,
+          currentSemester: student.current_semester,
+          status: student.status,
+          supervisorName: student.supervisor_name,
+          coSupervisor: student.co_supervisor,
+          member1: student.member1,
+          member2: student.member2,
+          thesisTitle: student.thesis_title || null,
+          thesisId: student.thesis_id,
+          synopsis: student.synopsis,
+          synopsisSubmissionDate: student.synopsis_submission_date,
+          gs2CourseWork: student.gs2_course_work,
+          gs4Form: student.gs4_form,
+          semiFinalThesisStatus: student.semi_final_thesis_status,
+          semiFinalThesisSubmissionDate: student.semi_final_thesis_submission_date,
+          finalThesisStatus: student.final_thesis_status,
+          finalThesisSubmissionDate: student.final_thesis_submission_date,
+          thesisSentToCOE: student.thesis_sent_to_coe,
+          coeSubmissionDate: student.coe_submission_date,
+          validationStatus: student.validation_status,
+          validationDate: student.validation_date,
+          comments: student.comments,
+          isLocked: student.is_locked,
+          profilePictureUrl: student.profile_picture_url || null,
+          filePath: sub?.file_path || null,
+          isUploaded: sub?.is_uploaded || false,
+          submissionDate: sub?.uploaded_at || null,
+          publicUrl: publicUrl,
+        }
+      });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
   // ── Save thesis title separately (called right after upload) ─────────────
   app.post("/api/student/save-title", async (req, res) => {
     const { cnic, thesisTitle, studentName, regNo, department, degree, supervisorName } = req.body;

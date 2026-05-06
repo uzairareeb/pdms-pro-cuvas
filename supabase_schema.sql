@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS students (
   member1 TEXT,
   member2 TEXT,
   thesis_id TEXT,
+  thesis_title TEXT,
   synopsis TEXT,
   synopsis_submission_date TEXT,
   gs2_course_work TEXT,
