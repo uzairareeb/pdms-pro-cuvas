@@ -339,7 +339,7 @@ const ResultManagement: React.FC = () => {
                </div>
             </div>
           </motion.div>
-        ) : activeTab === 'upload' ? (
+        ) : activeTab === 'upload' && (
           <motion.div 
             key="upload"
             initial={{ opacity: 0, y: 10 }}
@@ -436,7 +436,6 @@ const ResultManagement: React.FC = () => {
                   </table>
                 </div>
              </div>
-          </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
