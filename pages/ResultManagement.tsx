@@ -14,15 +14,6 @@ import { StudentResult, Student } from '../types';
 import Autocomplete from '../components/Autocomplete';
 import Papa from 'papaparse';
 import { useNavigate, useLocation } from 'react-router-dom';
-import DesignStudioCanvas from '../components/DesignStudioCanvas';
-
-interface ResultTemplate {
-  id: string;
-  name: string;
-  fileUrl: string;
-  isDefault: boolean;
-  createdAt: string;
-}
 
 const ResultManagement: React.FC = () => {
   const { students, notify } = useStore();
@@ -30,7 +21,6 @@ const ResultManagement: React.FC = () => {
   const navigate = useNavigate();
   
   const [results, setResults] = useState<StudentResult[]>([]);
-  const [templates, setTemplates] = useState<ResultTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,7 +28,6 @@ const ResultManagement: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const templateInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<StudentResult>>({
     studentCnic: '',
@@ -51,9 +40,7 @@ const ResultManagement: React.FC = () => {
   });
 
   // Sync tab with URL
-  const activeTab = location.pathname.includes('/templates') 
-    ? 'templates' 
-    : location.pathname.includes('/upload') 
+  const activeTab = location.pathname.includes('/upload') 
       ? 'upload' 
       : 'dashboard';
 
@@ -71,21 +58,8 @@ const ResultManagement: React.FC = () => {
     }
   };
 
-  const fetchTemplates = async () => {
-    try {
-      const res = await fetch('/api/admin/templates');
-      const data = await res.json();
-      if (data.success) {
-        setTemplates(data.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch templates:', err);
-    }
-  };
-
   useEffect(() => {
     fetchResults();
-    fetchTemplates();
   }, []);
 
   const handleCalculatePercentage = (obtained: number, total: number, passing: number) => {
@@ -220,64 +194,7 @@ const ResultManagement: React.FC = () => {
     });
   };
 
-  const handleTemplateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Data = reader.result as string;
-      await uploadTemplateData(base64Data, file.name);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const uploadTemplateData = async (base64Data: string, name: string) => {
-      try {
-        const res = await fetch('/api/admin/templates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            template: { 
-              name: name, 
-              file_url: base64Data, 
-              is_default: templates.length === 0 
-            } 
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          notify('Template saved successfully.', 'success');
-          fetchTemplates();
-        } else {
-          notify(data.message, 'error');
-        }
-      } catch (err) {
-        notify('Template save failed.', 'error');
-      }
-  };
-
-  const handleDeleteTemplate = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this template?")) return;
-    try {
-      const res = await fetch(`/api/admin/templates/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-         notify('Template deleted.', 'success');
-         fetchTemplates();
-      } else {
-         notify(data.message, 'error');
-      }
-    } catch (err) {
-      notify('Failed to delete template.', 'error');
-    }
-  };
-
-  const handleSetActiveTemplate = async (id: string) => {
-     // Optional: backend logic to set is_default=true for this id and false for others
-     notify('Template activated successfully.', 'success');
-     setTemplates(templates.map(t => ({ ...t, isDefault: t.id === id })));
-  };
 
   const filteredResults = results.filter(r => 
     r.studentCnic.toLowerCase().includes(searchTerm.toLowerCase())
@@ -289,10 +206,10 @@ const ResultManagement: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">
-            {activeTab === 'dashboard' ? 'Portal Dashboard' : activeTab === 'upload' ? 'Bulk Upload Center' : 'Design Studio'}
+            {activeTab === 'dashboard' ? 'Portal Dashboard' : 'Bulk Upload Center'}
           </h1>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-3">
-            {activeTab === 'dashboard' ? 'Performance Overview & Stats' : activeTab === 'upload' ? 'Bulk Data Processing' : 'Certificate Template Management'}
+            {activeTab === 'dashboard' ? 'Performance Overview & Stats' : 'Bulk Data Processing'}
           </p>
         </div>
         
@@ -334,7 +251,6 @@ const ResultManagement: React.FC = () => {
                 { label: 'Total Uploaded Results', value: results.length, icon: Users, color: 'indigo' },
                 { label: 'Pass Percentage', value: `${results.length ? Math.round((results.filter(r => r.status === 'Pass').length / results.length) * 100) : 0}%`, icon: TrendingUp, color: 'emerald' },
                 { label: 'Avg Achievement', value: `${results.length ? Math.round(results.reduce((acc, r) => acc + r.percentage, 0) / results.length) : 0}%`, icon: Zap, color: 'amber' },
-                { label: 'Design Templates', value: templates.length, icon: FileSpreadsheet, color: 'indigo' },
               ].map((stat, i) => (
                 <div key={i} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-6 group hover:border-indigo-200 transition-all">
                   <div className={`w-14 h-14 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center group-hover:scale-110 transition-transform`}>
@@ -364,16 +280,6 @@ const ResultManagement: React.FC = () => {
                            <div className="flex items-center gap-3">
                               <Upload size={18} />
                               <span className="text-[11px] font-black uppercase tracking-widest">Upload Results</span>
-                           </div>
-                           <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                        </button>
-                        <button 
-                          onClick={() => navigate('/result-admin/templates')}
-                          className="w-full flex items-center justify-between p-5 bg-slate-50 text-slate-700 rounded-2xl group hover:bg-slate-900 hover:text-white transition-all"
-                        >
-                           <div className="flex items-center gap-3">
-                              <FileSpreadsheet size={18} />
-                              <span className="text-[11px] font-black uppercase tracking-widest">Manage Templates</span>
                            </div>
                            <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                         </button>
@@ -531,38 +437,6 @@ const ResultManagement: React.FC = () => {
                 </div>
              </div>
           </motion.div>
-        ) : (
-          <motion.div 
-            key="templates"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-12"
-          >
-             <DesignStudioCanvas onSaveTemplate={uploadTemplateData} />
-             
-             <div className="pt-8 border-t border-slate-200">
-                <SectionHeader icon={Upload} title="Saved Templates" subtitle="Manage your existing result card layouts" />
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                   {templates.map(tmpl => (
-                     <div key={tmpl.id} className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm group">
-                        <div className="aspect-[1.4/1] bg-slate-100 relative overflow-hidden">
-                           <img src={tmpl.fileUrl} className="w-full h-full object-cover" alt="" />
-                           {tmpl.isDefault && <div className="absolute top-4 left-4 px-3 py-1 bg-emerald-500 text-white rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg">Active Template</div>}
-                        </div>
-                        <div className="p-6 border-b border-slate-50">
-                           <h4 className="text-sm font-black text-slate-900 uppercase truncate" title={tmpl.name}>{tmpl.name}</h4>
-                           <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Uploaded Template</p>
-                        </div>
-                        <div className="p-4 bg-slate-50 flex items-center justify-between gap-2">
-                           <button onClick={() => window.open(tmpl.fileUrl, '_blank')} className="flex-1 py-2 text-[9px] font-black text-indigo-600 hover:bg-indigo-100 rounded-lg uppercase tracking-widest transition-colors">Preview</button>
-                           {!tmpl.isDefault && <button onClick={() => handleSetActiveTemplate(tmpl.id)} className="flex-1 py-2 text-[9px] font-black text-emerald-600 hover:bg-emerald-100 rounded-lg uppercase tracking-widest transition-colors">Set Active</button>}
-                           <button onClick={() => handleDeleteTemplate(tmpl.id)} className="p-2 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors"><Trash2 size={14} /></button>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-             </div>
           </motion.div>
         )}
       </AnimatePresence>
