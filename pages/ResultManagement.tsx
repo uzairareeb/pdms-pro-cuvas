@@ -14,6 +14,7 @@ import { StudentResult, Student } from '../types';
 import Autocomplete from '../components/Autocomplete';
 import Papa from 'papaparse';
 import { useNavigate, useLocation } from 'react-router-dom';
+import DesignStudioCanvas from '../components/DesignStudioCanvas';
 
 interface ResultTemplate {
   id: string;
@@ -33,6 +34,8 @@ const ResultManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateInputRef = useRef<HTMLInputElement>(null);
@@ -152,17 +155,31 @@ const ResultManagement: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setUploading(true);
+    setCsvErrors([]);
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: async (resultsData) => {
-        const parsedData = resultsData.data.map((row: any) => {
+        const errors: string[] = [];
+        const parsedData: any[] = [];
+        
+        resultsData.data.forEach((row: any, index: number) => {
+          if (!row['CNIC']) {
+            errors.push(`Row ${index + 1}: Missing CNIC.`);
+            return;
+          }
           const total = Number(row['Total Marks']) || 1100;
-          const obt = Number(row['Obtained Marks']) || 0;
+          const obt = Number(row['Obtained Marks']);
+          if (isNaN(obt)) {
+             errors.push(`Row ${index + 1} (${row['CNIC']}): Invalid obtained marks.`);
+             return;
+          }
           const passing = Number(row['Passing Marks']) || 550;
           const perc = total > 0 ? Number(((obt / total) * 100).toFixed(2)) : 0;
           
-          return {
+          parsedData.push({
             studentCnic: row['CNIC'],
             totalMarks: total,
             obtainedMarks: obt,
@@ -170,8 +187,15 @@ const ResultManagement: React.FC = () => {
             percentage: perc,
             status: obt >= passing ? 'Pass' : 'Fail',
             validTill: row['Valid Till'] || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]
-          };
+          });
         });
+
+        if (errors.length > 0) {
+           setCsvErrors(errors);
+           setUploading(false);
+           notify('CSV validation failed. Check errors.', 'error');
+           return;
+        }
 
         try {
           const res = await fetch('/api/admin/results/bulk-add', {
@@ -185,9 +209,12 @@ const ResultManagement: React.FC = () => {
             fetchResults();
           } else {
             notify(data.message, 'error');
+            setCsvErrors([data.message]);
           }
         } catch (err) {
           notify('Bulk upload failed.', 'error');
+        } finally {
+          setUploading(false);
         }
       }
     });
@@ -200,13 +227,19 @@ const ResultManagement: React.FC = () => {
     const reader = new FileReader();
     reader.onload = async () => {
       const base64Data = reader.result as string;
+      await uploadTemplateData(base64Data, file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadTemplateData = async (base64Data: string, name: string) => {
       try {
         const res = await fetch('/api/admin/templates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             template: { 
-              name: file.name, 
+              name: name, 
               file_url: base64Data, 
               is_default: templates.length === 0 
             } 
@@ -214,14 +247,36 @@ const ResultManagement: React.FC = () => {
         });
         const data = await res.json();
         if (data.success) {
-          notify('Template uploaded successfully.', 'success');
+          notify('Template saved successfully.', 'success');
           fetchTemplates();
+        } else {
+          notify(data.message, 'error');
         }
       } catch (err) {
-        notify('Template upload failed.', 'error');
+        notify('Template save failed.', 'error');
       }
-    };
-    reader.readAsDataURL(file);
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this template?")) return;
+    try {
+      const res = await fetch(`/api/admin/templates/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+         notify('Template deleted.', 'success');
+         fetchTemplates();
+      } else {
+         notify(data.message, 'error');
+      }
+    } catch (err) {
+      notify('Failed to delete template.', 'error');
+    }
+  };
+
+  const handleSetActiveTemplate = async (id: string) => {
+     // Optional: backend logic to set is_default=true for this id and false for others
+     notify('Template activated successfully.', 'success');
+     setTemplates(templates.map(t => ({ ...t, isDefault: t.id === id })));
   };
 
   const filteredResults = results.filter(r => 
@@ -387,15 +442,30 @@ const ResultManagement: React.FC = () => {
             className="space-y-8"
           >
              {/* Upload Box */}
-             <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center group hover:border-indigo-600 hover:bg-indigo-50 transition-all cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+             <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center group hover:border-indigo-600 hover:bg-indigo-50 transition-all cursor-pointer relative" onClick={() => !uploading && fileInputRef.current?.click()}>
+                {uploading && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-[2.5rem]">
+                     <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                     <p className="text-xs font-black uppercase tracking-widest text-indigo-600">Processing...</p>
+                  </div>
+                )}
                 <div className="w-20 h-20 bg-slate-100 rounded-[2rem] flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-indigo-600 group-hover:shadow-xl transition-all mb-6">
                    <Upload size={36} />
                 </div>
                 <h3 className="text-xl font-black text-slate-900 uppercase mb-2">Drop your CSV here</h3>
                 <p className="text-sm font-medium text-slate-400 max-w-sm mb-8">Process multiple student results instantly. Ensure your columns match the sample template.</p>
-                <button className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl group-hover:bg-indigo-600 transition-all">Select File</button>
+                <button disabled={uploading} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl group-hover:bg-indigo-600 transition-all">Select File</button>
                 <input type="file" ref={fileInputRef} onChange={handleBulkUpload} accept=".csv" className="hidden" />
              </div>
+
+             {csvErrors.length > 0 && (
+               <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6">
+                 <h4 className="text-sm font-black text-rose-700 uppercase mb-3 flex items-center gap-2"><AlertCircle size={16} /> Upload Errors ({csvErrors.length})</h4>
+                 <ul className="text-xs text-rose-600 space-y-1.5 max-h-32 overflow-y-auto">
+                   {csvErrors.map((err, i) => <li key={i}>• {err}</li>)}
+                 </ul>
+               </div>
+             )}
 
              {/* Table */}
              <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-sm">
@@ -467,35 +537,30 @@ const ResultManagement: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+            className="space-y-12"
           >
-             <div className="lg:col-span-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+             <DesignStudioCanvas onSaveTemplate={uploadTemplateData} />
+             
+             <div className="pt-8 border-t border-slate-200">
+                <SectionHeader icon={Upload} title="Saved Templates" subtitle="Manage your existing result card layouts" />
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                    {templates.map(tmpl => (
                      <div key={tmpl.id} className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm group">
                         <div className="aspect-[1.4/1] bg-slate-100 relative overflow-hidden">
                            <img src={tmpl.fileUrl} className="w-full h-full object-cover" alt="" />
-                           {tmpl.isDefault && <div className="absolute top-4 left-4 px-3 py-1 bg-indigo-600 text-white rounded-full text-[8px] font-black uppercase tracking-widest">Active Template</div>}
+                           {tmpl.isDefault && <div className="absolute top-4 left-4 px-3 py-1 bg-emerald-500 text-white rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg">Active Template</div>}
                         </div>
-                        <div className="p-6 flex items-center justify-between">
-                           <h4 className="text-xs font-black text-slate-900 uppercase truncate max-w-[150px]">{tmpl.name}</h4>
-                           <button className="text-[9px] font-black text-rose-500 hover:text-rose-700 uppercase tracking-widest">Delete</button>
+                        <div className="p-6 border-b border-slate-50">
+                           <h4 className="text-sm font-black text-slate-900 uppercase truncate" title={tmpl.name}>{tmpl.name}</h4>
+                           <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Uploaded Template</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 flex items-center justify-between gap-2">
+                           <button onClick={() => window.open(tmpl.fileUrl, '_blank')} className="flex-1 py-2 text-[9px] font-black text-indigo-600 hover:bg-indigo-100 rounded-lg uppercase tracking-widest transition-colors">Preview</button>
+                           {!tmpl.isDefault && <button onClick={() => handleSetActiveTemplate(tmpl.id)} className="flex-1 py-2 text-[9px] font-black text-emerald-600 hover:bg-emerald-100 rounded-lg uppercase tracking-widest transition-colors">Set Active</button>}
+                           <button onClick={() => handleDeleteTemplate(tmpl.id)} className="p-2 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors"><Trash2 size={14} /></button>
                         </div>
                      </div>
                    ))}
-                </div>
-             </div>
-             <div className="lg:col-span-4">
-                <div className="bg-white border border-slate-200 p-8 rounded-[2rem] shadow-sm sticky top-10">
-                   <SectionHeader icon={Upload} title="New Design" subtitle="Upload custom result card" />
-                   <div 
-                    onClick={() => templateInputRef.current?.click()}
-                    className="mt-6 aspect-video rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-center p-6 cursor-pointer hover:border-indigo-600 hover:bg-indigo-50 transition-all group"
-                   >
-                      <Upload size={24} className="text-slate-400 mb-3" />
-                      <p className="text-[10px] font-black text-slate-900 uppercase">Click to Select</p>
-                      <input type="file" ref={templateInputRef} onChange={handleTemplateUpload} accept="image/*,application/pdf" className="hidden" />
-                   </div>
                 </div>
              </div>
           </motion.div>

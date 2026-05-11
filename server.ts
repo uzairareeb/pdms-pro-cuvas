@@ -16,6 +16,7 @@ async function startServer() {
   // Centralized Bucket Configuration (Case-Sensitive fix for Supabase)
   const THESIS_BUCKET = 'thesis-files';
   const PROFILE_PICTURE_BUCKET = 'profile-pictures';
+  const RESULT_TEMPLATES_BUCKET = 'result-templates';
 
   const handleProfilePictureBase64 = async (cnic: string, base64Data: string) => {
     try {
@@ -621,6 +622,22 @@ async function startServer() {
     }
   };
 
+  const ensureResultTemplatesBucket = async () => {
+    try {
+      const supabase = getServiceClient();
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const exists = buckets?.some(b => b.name === RESULT_TEMPLATES_BUCKET);
+      if (!exists) {
+        await supabase.storage.createBucket(RESULT_TEMPLATES_BUCKET, {
+          public: true, 
+          fileSizeLimit: 20971520 // 20MB
+        });
+      }
+    } catch (e) {
+      console.error("Result templates bucket check failed:", e);
+    }
+  };
+
   const ensureProfilePictureBucket = async () => {
     try {
       const supabase = getServiceClient();
@@ -938,7 +955,19 @@ async function startServer() {
       const supabase = getServiceClient();
       const { data, error } = await supabase.from('student_results').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      return res.json({ success: true, data });
+      
+      const mappedData = data.map((r: any) => ({
+        id: r.id,
+        studentCnic: r.student_cnic,
+        totalMarks: r.total_marks,
+        obtainedMarks: r.obtained_marks,
+        passingMarks: r.passing_marks,
+        percentage: r.percentage,
+        status: r.status,
+        validTill: r.valid_till
+      }));
+      
+      return res.json({ success: true, data: mappedData });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -964,7 +993,14 @@ async function startServer() {
         .from('student_results')
         .upsert(payload, { onConflict: 'student_cnic' });
         
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01' || error.message.includes('does not exist')) {
+           return res.status(400).json({ success: false, message: "Table 'student_results' does not exist. Please run the setup SQL." });
+        } else if (error.code === 'PGRST301' || error.message.includes('schema cache')) {
+           return res.status(400).json({ success: false, message: "Could not find the table in the schema cache. Please go to Supabase Dashboard > SQL Editor, and run: NOTIFY pgrst, reload_schema;" });
+        }
+        throw error;
+      }
       return res.json({ success: true, message: 'Result updated successfully.' });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
@@ -986,7 +1022,14 @@ async function startServer() {
       }));
 
       const { error } = await supabase.from('student_results').upsert(rows, { onConflict: 'student_cnic' });
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01' || error.message.includes('does not exist')) {
+           return res.status(400).json({ success: false, message: "Table 'student_results' does not exist. Please run the setup SQL." });
+        } else if (error.code === 'PGRST301' || error.message.includes('schema cache')) {
+           return res.status(400).json({ success: false, message: "Could not find the table in the schema cache. Please go to Supabase Dashboard > SQL Editor, and run: NOTIFY pgrst, reload_schema;" });
+        }
+        throw error;
+      }
       return res.json({ success: true, count: rows.length });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
@@ -998,7 +1041,16 @@ async function startServer() {
       const supabase = getServiceClient();
       const { data, error } = await supabase.from('result_templates').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      return res.json({ success: true, data });
+      
+      const mappedData = data.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        fileUrl: t.file_url,
+        isDefault: t.is_default,
+        createdAt: t.created_at
+      }));
+      
+      return res.json({ success: true, data: mappedData });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -1007,10 +1059,59 @@ async function startServer() {
   app.post("/api/admin/templates", async (req, res) => {
     const { template } = req.body;
     try {
+      if (!template.name || !template.file_url) throw new Error("Template name and file are required.");
+      
       const supabase = getServiceClient();
-      const { error } = await supabase.from('result_templates').insert([template]);
+      await ensureResultTemplatesBucket();
+      
+      let fileUrl = template.file_url;
+      if (fileUrl.startsWith('data:')) {
+         const base64Data = fileUrl.split(';base64,').pop();
+         if (!base64Data) throw new Error("Invalid base64 string");
+         const buffer = Buffer.from(base64Data, 'base64');
+         const fileExt = template.name.split('.').pop() || 'png';
+         const fileName = `${Date.now()}_${template.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+         
+         const { data: uploadData, error: uploadError } = await supabase.storage
+            .from(RESULT_TEMPLATES_BUCKET)
+            .upload(fileName, buffer, {
+               contentType: fileUrl.substring(fileUrl.indexOf(':') + 1, fileUrl.indexOf(';')),
+               upsert: true
+            });
+            
+         if (uploadError) throw new Error(uploadError.message);
+         
+         const { data: urlData } = supabase.storage
+            .from(RESULT_TEMPLATES_BUCKET)
+            .getPublicUrl(fileName);
+            
+         fileUrl = urlData.publicUrl;
+      }
+      
+      const payload = {
+         name: template.name,
+         file_url: fileUrl,
+         is_default: template.is_default
+      };
+
+      const { error } = await supabase.from('result_templates').insert([payload]);
       if (error) throw error;
       return res.json({ success: true, message: 'Template saved successfully.' });
+    } catch (error: any) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/templates/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const supabase = getServiceClient();
+      
+      // Optionally delete from storage, but we would need the file path
+      
+      const { error } = await supabase.from('result_templates').delete().eq('id', id);
+      if (error) throw error;
+      return res.json({ success: true, message: 'Template deleted successfully.' });
     } catch (error: any) {
       return res.status(400).json({ success: false, message: error.message });
     }
@@ -1318,49 +1419,124 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
     }
   });
 
-  // ── Admin: fetch all thesis titles ────────────────────────────────────────
+  // ── Admin: fetch all thesis titles (enhanced — pulls from students table) ───
   app.get("/api/admin/thesis-titles", async (req, res) => {
     try {
       const supabase = getServiceClient();
-      // Try to get thesis_title from thesis_submissions
-      const { data, error } = await supabase
-        .from('thesis_submissions')
-        .select('student_cnic, student_id, thesis_title, uploaded_at')
-        .eq('is_uploaded', true);
+
+      // Fetch all students that have a thesis_title set
+      const { data: studentsData, error } = await supabase
+        .from('students')
+        .select('id, cnic, name, reg_no, department, degree, supervisor_name, thesis_title')
+        .not('thesis_title', 'is', null)
+        .neq('thesis_title', '');
 
       if (error) {
-        // Column may not exist — return empty gracefully
         return res.json({ success: true, records: [] });
       }
 
-      // Fetch all students to enrich the records
-      const { data: studentsData } = await supabase.from('students').select('id, cnic, name, reg_no, department, degree, supervisor_name');
-      const studentMap: Record<string, any> = {};
-      if (studentsData) {
-        studentsData.forEach((s: any) => {
-          const norm = (s.cnic || '').replace(/[-\s]/g, '').trim();
-          studentMap[norm] = s;
+      // Also pull from thesis_submissions for submission date & publicUrl info
+      const { data: submissionsData } = await supabase
+        .from('thesis_submissions')
+        .select('student_cnic, thesis_title, uploaded_at, is_uploaded');
+
+      const submissionMap: Record<string, any> = {};
+      if (submissionsData) {
+        submissionsData.forEach((s: any) => {
+          const norm = (s.student_cnic || '').replace(/[-\s]/g, '').trim();
+          submissionMap[norm] = s;
         });
       }
 
-      const records = (data || []).map((row: any) => {
-        const norm = (row.student_cnic || '').replace(/[-\s]/g, '').trim();
-        const st = studentMap[norm];
+      const records = (studentsData || []).map((s: any) => {
+        const norm = (s.cnic || '').replace(/[-\s]/g, '').trim();
+        const sub = submissionMap[norm];
+        // Prefer the students.thesis_title (most up-to-date from student portal edits)
+        const title = s.thesis_title || sub?.thesis_title || null;
         return {
           cnic: norm,
-          thesisTitle: row.thesis_title || null,
-          submissionDate: row.uploaded_at,
-          studentName: st?.name || '',
-          regNo: st?.reg_no || '',
-          department: st?.department || '',
-          degree: st?.degree || '',
-          supervisorName: st?.supervisor_name || '',
+          thesisTitle: title,
+          submissionDate: sub?.uploaded_at || null,
+          studentName: s.name || '',
+          regNo: s.reg_no || '',
+          department: s.department || '',
+          degree: s.degree || '',
+          supervisorName: s.supervisor_name || '',
         };
       });
 
-      return res.json({ success: true, records });
+      return res.json({ success: true, records: records.filter((r: any) => r.thesisTitle) });
     } catch (error: any) {
       return res.json({ success: true, records: [] });
+    }
+  });
+
+  // ── Admin: Duplicate Thesis Detection (HAVING COUNT(*) > 1 logic) ─────────
+  app.get("/api/admin/thesis-duplicates", async (req, res) => {
+    try {
+      const supabase = getServiceClient();
+
+      // Fetch all students with a thesis_title
+      const { data: studentsData, error } = await supabase
+        .from('students')
+        .select('id, cnic, name, reg_no, department, degree, supervisor_name, thesis_title')
+        .not('thesis_title', 'is', null)
+        .neq('thesis_title', '');
+
+      if (error) {
+        return res.json({ success: true, duplicateGroups: [] });
+      }
+
+      // Also fetch thesis_submissions for submission date details
+      const { data: submissionsData } = await supabase
+        .from('thesis_submissions')
+        .select('student_cnic, uploaded_at');
+
+      const submissionMap: Record<string, string | null> = {};
+      if (submissionsData) {
+        submissionsData.forEach((s: any) => {
+          const norm = (s.student_cnic || '').replace(/[-\s]/g, '').trim();
+          submissionMap[norm] = s.uploaded_at || null;
+        });
+      }
+
+      // Normalize titles: trim + lowercase (same logic as frontend normalizeTitle)
+      const normalize = (t: string) => t.trim().toLowerCase().replace(/\s+/g, ' ');
+
+      // Group by normalized title
+      const groups: Record<string, any[]> = {};
+      for (const s of (studentsData || [])) {
+        if (!s.thesis_title) continue;
+        const key = normalize(s.thesis_title);
+        if (!groups[key]) groups[key] = [];
+        const norm = (s.cnic || '').replace(/[-\s]/g, '').trim();
+        groups[key].push({
+          studentId: s.id,
+          studentName: s.name || '',
+          regNo: s.reg_no || '',
+          department: s.department || '',
+          degree: s.degree || '',
+          supervisorName: s.supervisor_name || '',
+          thesisTitle: s.thesis_title,
+          cnic: norm,
+          submissionDate: submissionMap[norm] || null,
+        });
+      }
+
+      // Filter HAVING COUNT(*) > 1
+      const duplicateGroups = Object.entries(groups)
+        .filter(([, students]) => students.length >= 2)
+        .map(([normalizedTitle, students]) => ({
+          normalizedTitle,
+          displayTitle: students[0].thesisTitle,
+          count: students.length,
+          students,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      return res.json({ success: true, duplicateGroups });
+    } catch (error: any) {
+      return res.json({ success: true, duplicateGroups: [] });
     }
   });
 
@@ -1422,6 +1598,7 @@ ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;`
 
   // Run migrations on startup
   void ensureProfilePictureBucket();
+  void ensureResultTemplatesBucket();
   void ensureThesisTable();
   void ensureResultsTable();
   void ensureTemplatesTable();

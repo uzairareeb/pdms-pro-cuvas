@@ -144,3 +144,51 @@ INSERT INTO departments (id, name) VALUES
 ('dept-fa', 'Fisheries & Aquiculture'),
 ('dept-zo', 'Zoology')
 ON CONFLICT (name) DO NOTHING;
+
+-- 10. Thesis Submissions Table
+CREATE TABLE IF NOT EXISTS thesis_submissions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  student_cnic TEXT UNIQUE NOT NULL,
+  student_id TEXT,
+  file_path TEXT NOT NULL,
+  thesis_title TEXT,
+  is_uploaded BOOLEAN DEFAULT TRUE,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE thesis_submissions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON thesis_submissions FOR ALL USING (true) WITH CHECK (true);
+
+-- 11. Student Results Table
+CREATE TABLE IF NOT EXISTS student_results (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  student_cnic TEXT UNIQUE NOT NULL,
+  total_marks INTEGER NOT NULL,
+  obtained_marks INTEGER NOT NULL,
+  passing_marks INTEGER NOT NULL DEFAULT 550,
+  percentage DECIMAL NOT NULL,
+  status TEXT NOT NULL,
+  valid_till DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE student_results ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON student_results FOR ALL USING (true) WITH CHECK (true);
+
+-- 12. Result Templates Table
+CREATE TABLE IF NOT EXISTS result_templates (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  file_url TEXT NOT NULL,
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE result_templates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON result_templates FOR ALL USING (true) WITH CHECK (true);
+
+-- 13. Storage Setup Instructions (for buckets)
+-- Please ensure the following buckets are created in Supabase Storage with "Public" access:
+-- 1. "profile-pictures"
+-- 2. "thesis-files"
+-- 3. "result-templates"
+
+-- 14. Reload PostgREST schema cache so API immediately recognizes new tables
+NOTIFY pgrst, reload_schema;

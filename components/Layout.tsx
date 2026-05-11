@@ -65,7 +65,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { name: 'Readmissions', icon: RefreshCw, path: '/readmission-registry', module: 'ReadmissionRegistry' },
     { name: 'Synopsis Tracking', icon: ClipboardList, path: '/synopsis-submission', module: 'SynopsisSubmission' },
     { name: 'Thesis Tracking', icon: BookOpenCheck, path: '/thesis-tracking', module: 'ThesisTracking' },
-    { name: 'Duplicate Detector', icon: AlertTriangle, path: '/thesis-duplicates', module: 'ThesisTracking' },
+    { name: 'Duplicate Thesis Detection', icon: AlertTriangle, path: '/thesis-duplicates', module: 'ThesisTracking' },
     { name: 'Bulk Data Upload', icon: CloudUpload, path: '/upload', module: 'BulkUpload' },
     { name: 'Data Export (CSV)', icon: Download, path: '/export', module: 'DataExport' },
   ];
