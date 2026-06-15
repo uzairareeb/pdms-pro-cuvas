@@ -144,7 +144,6 @@ const StudentRecords: React.FC = () => {
       const updates: Partial<Student> = {};
       if (bulkUpdateData.currentSemester) updates.currentSemester = parseInt(bulkUpdateData.currentSemester);
       if (bulkUpdateData.status) updates.status = bulkUpdateData.status as StudentStatus;
-      if (bulkUpdateData.department) updates.department = bulkUpdateData.department;
       
       await bulkUpdateStudents(updates, selectedIds);
       setIsBulkUpdating(false);
@@ -236,6 +235,15 @@ const StudentRecords: React.FC = () => {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
+          {hasActiveFilters && filtered.length > 0 && (
+            <button
+              onClick={() => setSelectedIds(filtered.map(s => s.id))}
+              className="flex items-center gap-2 px-5 py-3 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95"
+            >
+              <CheckCircle2 size={13} />
+              <span className="hidden sm:block">Select All ({filtered.length})</span>
+            </button>
+          )}
           <button
             onClick={resetFilters}
             disabled={!hasActiveFilters}
@@ -669,20 +677,6 @@ const StudentRecords: React.FC = () => {
                       <option value="">No Change</option>
                       {Object.values(StudentStatus).map(status => (
                         <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Target Department</label>
-                    <select
-                      value={bulkUpdateData.department}
-                      onChange={e => setBulkUpdateData(prev => ({ ...prev, department: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 transition-all"
-                    >
-                      <option value="">No Change</option>
-                      {departments.map(dept => (
-                        <option key={dept} value={dept}>{dept}</option>
                       ))}
                     </select>
                   </div>

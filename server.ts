@@ -458,14 +458,17 @@ async function startServer() {
       const dbUpdates: any = {};
       if (updates.currentSemester !== undefined) dbUpdates.current_semester = updates.currentSemester;
       if (updates.status !== undefined) dbUpdates.status = updates.status;
-      if (updates.department !== undefined) dbUpdates.department = updates.department;
       
       if (Object.keys(dbUpdates).length === 0) {
         return res.json({ success: true });
       }
-
-      const { error } = await supabase.from('students').update(dbUpdates).in('id', ids);
-      if (error) throw error;
+      // Process in chunks of 500 to avoid URI/payload length limits in Supabase
+      const chunkSize = 500;
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const { error } = await supabase.from('students').update(dbUpdates).in('id', chunk);
+        if (error) throw error;
+      }
       
       return res.json({ success: true });
     } catch (error: any) {
