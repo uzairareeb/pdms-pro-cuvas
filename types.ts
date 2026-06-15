@@ -45,7 +45,9 @@ export interface Student {
   thesisId: string;
   synopsis: 'Not Submitted' | 'Submitted' | 'Approved';
   synopsisSubmissionDate: string;
+  gs1Form?: 'Not Submitted' | 'Submitted' | 'Approved';
   gs2CourseWork: 'Not Completed' | 'Completed';
+  gs3Form?: 'Not Submitted' | 'Submitted' | 'Approved';
   gs4Form: 'Not Submitted' | 'Submitted' | 'Approved';
   
   semiFinalThesisStatus: 'Not Submitted' | 'Submitted' | 'Approved';

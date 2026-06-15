@@ -450,6 +450,30 @@ async function startServer() {
     }
   });
 
+  app.post("/api/supabase/students/bulk-update", async (req, res) => {
+    const { updates, ids } = req.body;
+    try {
+      const supabase = getSupabaseClient();
+      
+      const dbUpdates: any = {};
+      if (updates.currentSemester !== undefined) dbUpdates.current_semester = updates.currentSemester;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.department !== undefined) dbUpdates.department = updates.department;
+      
+      if (Object.keys(dbUpdates).length === 0) {
+        return res.json({ success: true });
+      }
+
+      const { error } = await supabase.from('students').update(dbUpdates).in('id', ids);
+      if (error) throw error;
+      
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error('Bulk update error:', error.message);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
   app.post("/api/supabase/students/delete", async (req, res) => {
     const { id } = req.body;
     try {

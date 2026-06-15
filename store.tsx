@@ -35,6 +35,7 @@ interface AppContextType {
   addStudent: (student: Omit<Student, 'id' | 'isLocked' | 'srNo'>) => void;
   bulkAddStudents: (newStudents: Omit<Student, 'id' | 'isLocked' | 'srNo'>[]) => Promise<number>;
   updateStudent: (student: Student) => void;
+  bulkUpdateStudents: (updates: Partial<Student>, ids: string[]) => void;
   deleteStudent: (id: string) => void;
   bulkDeleteStudents: (ids: string[]) => void;
   deleteAllStudents: () => void;
@@ -544,6 +545,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     notify(`${ids.length} scholar records have been purged.`, 'success');
   };
 
+  const bulkUpdateStudents = async (updates: Partial<Student>, ids: string[]) => {
+    if (isDatabaseConnected) {
+      try {
+        await fetch('/api/supabase/students/bulk-update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates, ids })
+        });
+      } catch (e) {
+        notify("Failed to sync bulk update with cloud", "error");
+        return;
+      }
+    }
+
+    setStudents(prev => prev.map(s => ids.includes(s.id) ? { ...s, ...updates } : s));
+    logAction('Records', `Bulk Update: Modified ${ids.length} records.`, 'StudentRecords');
+    notify(`${ids.length} scholar records have been updated.`, 'success');
+  };
+
   const deleteAllStudents = async () => {
     if (isDatabaseConnected) {
       try {
@@ -800,6 +820,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addStudent,
       bulkAddStudents,
       updateStudent,
+      bulkUpdateStudents,
       deleteStudent,
       bulkDeleteStudents,
       deleteAllStudents,

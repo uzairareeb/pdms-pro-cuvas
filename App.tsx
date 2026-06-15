@@ -26,6 +26,7 @@ import StudentLogin from './pages/StudentLogin';
 import StudentPortal from './pages/StudentPortal';
 import ResultCheck from './pages/ResultCheck';
 import ResultManagement from './pages/ResultManagement';
+import ArchivedRecords from './pages/ArchivedRecords';
 
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 import InstallPWA from './components/InstallPWA';
@@ -136,6 +137,7 @@ const AppRoutes = () => {
         <Route path="/records" element={<ProtectedRoute module="StudentRecords"><StudentRecords /></ProtectedRoute>} />
         <Route path="/synopsis-submission" element={<ProtectedRoute module="SynopsisSubmission"><SynopsisSubmission /></ProtectedRoute>} />
         <Route path="/thesis-tracking" element={<ProtectedRoute module="ThesisTracking"><ThesisTracking /></ProtectedRoute>} />
+        <Route path="/archived" element={<ProtectedRoute module="StudentRecords"><ArchivedRecords /></ProtectedRoute>} />
         <Route path="/thesis-duplicates" element={<ProtectedRoute module="ThesisTracking"><ThesisDuplicates /></ProtectedRoute>} />
         <Route path="/readmission-registry" element={<ProtectedRoute module="ReadmissionRegistry"><ReadmissionRegistry /></ProtectedRoute>} />
         

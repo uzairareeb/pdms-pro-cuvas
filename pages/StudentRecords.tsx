@@ -6,9 +6,9 @@ import {
   X, User, RotateCcw, ChevronDown, ShieldAlert,
   MapPin, Briefcase, ChevronRight, ChevronLeft,
   GraduationCap, CheckCircle2, Users, Filter,
-  AlertCircle, Printer, Archive
+  AlertCircle, Printer, Archive, Edit3, Clock
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Student, StudentStatus, ValidationStatus } from '../types';
 import Tooltip from '../components/Tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -72,7 +72,7 @@ const InfoRow = ({ label, value }: { label: string; value?: string }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const StudentRecords: React.FC = () => {
   const {
-    students, deleteStudent, bulkDeleteStudents, deleteAllStudents,
+    students, deleteStudent, bulkDeleteStudents, deleteAllStudents, bulkUpdateStudents,
     toggleLockStudent, currentRole, departments, settings, isDatabaseConnected
   } = useStore();
 
@@ -84,15 +84,19 @@ const StudentRecords: React.FC = () => {
   const [filterDept,       setFilterDept]       = useState('');
   const [filterStatus,     setFilterStatus]     = useState('');
   const [filterValidation, setFilterValidation] = useState('');
+  const [filterSemester,   setFilterSemester]   = useState('');
   const [currentPage,      setCurrentPage]      = useState(1);
+  const [isBulkUpdating,   setIsBulkUpdating]   = useState(false);
+  const [bulkUpdateData,   setBulkUpdateData]   = useState({ currentSemester: '', status: '', department: '' });
   const [deletingId,       setDeletingId]       = useState<string | null>(null);
   const [previewStudent,   setPreviewStudent]   = useState<Student | null>(null);
+  const navigate = useNavigate();
 
   const itemsPerPage = 15;
 
   const resetFilters = () => {
     setSearchTerm(''); setFilterDegree(''); setFilterDept('');
-    setFilterStatus(''); setFilterValidation(''); setCurrentPage(1);
+    setFilterStatus(''); setFilterValidation(''); setFilterSemester(''); setCurrentPage(1);
   };
 
   const normalizeDegree = (val: string) => val.replace(/\./g, '').trim().toUpperCase();
@@ -106,14 +110,15 @@ const StudentRecords: React.FC = () => {
     const matchesDept       = filterDept       === '' || s.department === filterDept;
     const matchesStatus     = filterStatus     === '' || normalizeStatus(s.status) === normalizeStatus(filterStatus);
     const matchesValidation = filterValidation === '' || s.validationStatus === filterValidation;
-    return matchesSearch && matchesDegree && matchesDept && matchesStatus && matchesValidation;
+    const matchesSemester   = filterSemester   === '' || s.currentSemester?.toString() === filterSemester;
+    return matchesSearch && matchesDegree && matchesDept && matchesStatus && matchesValidation && matchesSemester;
   });
 
   const totalPages        = Math.ceil(filtered.length / itemsPerPage);
   const paginatedStudents = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  const hasActiveFilters  = !!(filterDegree || filterDept || filterStatus || filterValidation || searchTerm);
+  const hasActiveFilters  = !!(filterDegree || filterDept || filterStatus || filterValidation || filterSemester || searchTerm);
 
-  React.useEffect(() => { setCurrentPage(1); }, [searchTerm, filterDegree, filterDept, filterStatus, filterValidation]);
+  React.useEffect(() => { setCurrentPage(1); }, [searchTerm, filterDegree, filterDept, filterStatus, filterValidation, filterSemester]);
 
   const handleToggleLock = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -132,6 +137,20 @@ const StudentRecords: React.FC = () => {
       else if (isBulkDeleting) { await bulkDeleteStudents(selectedIds); setSelectedIds([]); setIsBulkDeleting(false); }
       else if (deletingId)     { await deleteStudent(deletingId);       setDeletingId(null); }
     } catch (err) { console.error('Deletion failed:', err); }
+  };
+
+  const handleBulkUpdateSubmit = async () => {
+    try {
+      const updates: Partial<Student> = {};
+      if (bulkUpdateData.currentSemester) updates.currentSemester = parseInt(bulkUpdateData.currentSemester);
+      if (bulkUpdateData.status) updates.status = bulkUpdateData.status as StudentStatus;
+      if (bulkUpdateData.department) updates.department = bulkUpdateData.department;
+      
+      await bulkUpdateStudents(updates, selectedIds);
+      setIsBulkUpdating(false);
+      setSelectedIds([]);
+      setBulkUpdateData({ currentSemester: '', status: '', department: '' });
+    } catch (err) { console.error('Bulk update failed:', err); }
   };
 
 
@@ -163,6 +182,14 @@ const StudentRecords: React.FC = () => {
               <span>Database offline</span>
               <Link to="/settings" className="underline hover:no-underline">Connect</Link>
             </div>
+          )}
+
+          {/* Bulk Update */}
+          {selectedIds.length > 0 && currentRole?.StudentRecords?.edit && (
+            <button onClick={() => setIsBulkUpdating(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all active:scale-95">
+              <Edit3 size={13} /><span>Update {selectedIds.length} selected</span>
+            </button>
           )}
 
           {/* Bulk delete */}
@@ -224,7 +251,7 @@ const StudentRecords: React.FC = () => {
         </div>
 
         {/* Filter dropdowns */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <FilterSelect label="Degree" value={filterDegree} icon={GraduationCap}
             options={['M.Phil', 'PhD']} displayOptions={['M.Phil', 'PhD']} onChange={setFilterDegree} />
           <FilterSelect label="Department" value={filterDept} icon={MapPin}
@@ -233,6 +260,8 @@ const StudentRecords: React.FC = () => {
             options={Object.values(StudentStatus)} onChange={setFilterStatus} />
           <FilterSelect label="Audit Status" value={filterValidation} icon={CheckCircle2}
             options={Object.values(ValidationStatus)} onChange={setFilterValidation} />
+          <FilterSelect label="Semester" value={filterSemester} icon={Clock}
+            options={['1', '2', '3', '4', '5', '6', '7', '8']} onChange={setFilterSemester} />
         </div>
 
         {/* Active filter chips */}
@@ -244,6 +273,7 @@ const StudentRecords: React.FC = () => {
             {filterDept    && <Chip label={`Dept: ${filterDept}`}        onRemove={() => setFilterDept('')} />}
             {filterStatus  && <Chip label={`Status: ${filterStatus}`}    onRemove={() => setFilterStatus('')} />}
             {filterValidation && <Chip label={`Audit: ${filterValidation}`} onRemove={() => setFilterValidation('')} />}
+            {filterSemester && <Chip label={`Semester: ${filterSemester}`} onRemove={() => setFilterSemester('')} />}
           </div>
         )}
       </div>
@@ -254,7 +284,7 @@ const StudentRecords: React.FC = () => {
         {/* ─ Mobile Card Layout ─ */}
         <div className="md:hidden divide-y divide-slate-100">
           {paginatedStudents.map(student => (
-            <div key={student.id} onClick={() => setPreviewStudent(student)}
+            <div key={student.id} onClick={() => navigate(`/students/${student.id}`)}
               className="p-5 flex flex-col gap-3.5 hover:bg-slate-50/60 transition-colors cursor-pointer">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -316,8 +346,8 @@ const StudentRecords: React.FC = () => {
                 const isSelected = selectedIds.includes(student.id);
                 const isPreviewed = previewStudent?.id === student.id;
                 return (
-                  <tr key={student.id} onClick={() => setPreviewStudent(student)}
-                    className={`cursor-pointer transition-colors group ${isPreviewed ? 'bg-indigo-50/60' : 'hover:bg-slate-50/60'} ${student.isLocked ? 'bg-amber-50/30' : ''}`}
+                  <tr key={student.id} onClick={() => navigate(`/students/${student.id}`)}
+                    className={`cursor-pointer transition-colors group hover:bg-slate-50/60 ${student.isLocked ? 'bg-amber-50/30' : ''}`}
                   >
                     {/* Checkbox */}
                     <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
@@ -589,6 +619,90 @@ const StudentRecords: React.FC = () => {
       </AnimatePresence>
 
 
+
+      {/* ── Bulk Update Modal ────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isBulkUpdating && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 no-print">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsBulkUpdating(false)} />
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+              className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="h-1.5 bg-indigo-500" />
+              <div className="p-8 space-y-5">
+                <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mx-auto">
+                  <Edit3 size={30} />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                    Update {selectedIds.length} Students
+                  </h3>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed mt-2">
+                    Select the fields you want to update for the selected students. Leave blank to keep existing values.
+                  </p>
+                </div>
+                
+                <div className="space-y-4 pt-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Target Semester</label>
+                    <select
+                      value={bulkUpdateData.currentSemester}
+                      onChange={e => setBulkUpdateData(prev => ({ ...prev, currentSemester: e.target.value }))}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 transition-all"
+                    >
+                      <option value="">No Change</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                        <option key={sem} value={sem}>Semester {sem}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Target Status</label>
+                    <select
+                      value={bulkUpdateData.status}
+                      onChange={e => setBulkUpdateData(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 transition-all"
+                    >
+                      <option value="">No Change</option>
+                      {Object.values(StudentStatus).map(status => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Target Department</label>
+                    <select
+                      value={bulkUpdateData.department}
+                      onChange={e => setBulkUpdateData(prev => ({ ...prev, department: e.target.value }))}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/8 transition-all"
+                    >
+                      <option value="">No Change</option>
+                      {departments.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-8 pb-8 flex gap-3">
+                <button onClick={() => setIsBulkUpdating(false)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all">
+                  Cancel
+                </button>
+                <button onClick={handleBulkUpdateSubmit}
+                  className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-sm">
+                  Apply Updates
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </motion.div>
   );
